@@ -6,6 +6,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.gavryushkin.parser.bitmex.Bitmex;
 import ru.gavryushkin.parser.rest.JettyApplication;
+import ru.gavryushkin.parser.subscriber.Authorization;
 
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
@@ -864,17 +865,16 @@ public class ParserApplication {
         @Override
         public void run() {
             work = true;
-            getRemoteAccess();
             text.setText("Ждите...Идёт авторизация.");
-            //token = new Authorization().isLogIn(dialog.tokenField.getText());
-            token=true;
+            token = new Authorization().isLogIn(dialog.tokenField.getText());
             if (token == false) {
                 text.setText("Активируйте подписку (введите TOKEN в настройках)");
             }
+            getRemoteAccess();
             //*************************************************************************************************************************//
             //Заглушка
+            Robot robot = null;
             while (work != false && token != false && dialog.webHooksMode.isSelected() != true) {
-                Robot robot = null;
                 try {
                     robot = new Robot();
                 } catch (AWTException e1) {
@@ -910,12 +910,15 @@ public class ParserApplication {
                 count++;
                 searchpixel(pixels);
             }
-
             //Инициализация режима WebHooks
-            if (work != false && dialog.webHooksMode.isSelected() == true && token != false) {
+            if (work != false && dialog.webHooksMode.isSelected() == true && token != false && JettyApplication.getStatusServer() != true) {
                 text.setText("Режим WebHooks запущен...");
-                jettyApplication = new JettyApplication(tr,dialog);
-                jettyApplication.startServerJetty();
+                try {
+                    jettyApplication = new JettyApplication(tr, dialog);
+                    jettyApplication.startServerJetty();
+                } catch (Exception e) {
+                }
+                ;
             }
         }
 
@@ -2190,8 +2193,8 @@ public class ParserApplication {
         }
 
         //Возвращает текущее направлении  позиции
-        public void setStatus(int newStatus){
-            status=newStatus;
+        public void setStatus(int newStatus) {
+            status = newStatus;
         }
 
         public synchronized void Order_Buy() {
@@ -2209,7 +2212,8 @@ public class ParserApplication {
                         str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                     }
                     size += Integer.parseInt(dialog.getQuantitytext()) * 2;
-                } else if (status == 0) {
+                }
+                if (status == 0) {
                     pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(dialog.getQuantitytext())));
                     for (int i = 0; i < list.size(); i++) {
                         str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
@@ -2218,18 +2222,16 @@ public class ParserApplication {
                 }
                 //Деление реверсивного ордера
                 separateBuyOrder(pr, list, str);
-                if (dialog.getSeparateOrderCheckBox().isSelected() == Boolean.FALSE) {
-                    try {
-                        BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
-                        writer.write(str + "\r\n");
-                        writer.flush();
-                        writer.close();
-                        text.setText("Покупка...");
-                    } catch (IOException e1) {
-                        test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
-                        JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
-                        e1.printStackTrace();
-                    }
+                try {
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                    writer.write(str + "\r\n");
+                    writer.flush();
+                    writer.close();
+                    text.setText("Покупка...");
+                } catch (IOException e1) {
+                    test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                    e1.printStackTrace();
                 }
             } else {
                 try {
@@ -2271,7 +2273,8 @@ public class ParserApplication {
                         str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                     }
                     size -= Integer.parseInt(dialog.getQuantitytext()) * 2;
-                } else if (status == 0) {
+                }
+                if (status == 0) {
                     pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(dialog.getQuantitytext())));
                     for (int i = 0; i < list.size(); i++) {
                         str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
@@ -2279,18 +2282,16 @@ public class ParserApplication {
                     size -= Integer.parseInt(dialog.getQuantitytext());
                 }
                 separateSellOrder(pr, list, str);
-                if (dialog.getSeparateOrderCheckBox().isSelected() == false) {
-                    try {
-                        BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
-                        writer.write(str + "\r\n");
-                        writer.flush();
-                        writer.close();
-                        text.setText("Продажа...");
-                    } catch (IOException e1) {
-                        test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
-                        JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
-                        e1.printStackTrace();
-                    }
+                try {
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                    writer.write(str + "\r\n");
+                    writer.flush();
+                    writer.close();
+                    text.setText("Продажа...");
+                } catch (IOException e1) {
+                    test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                    e1.printStackTrace();
                 }
             } else {
                 try {
@@ -2873,6 +2874,14 @@ public class ParserApplication {
                 && (!String.valueOf(dialog.cbFirst.getSelectedItem()).equals("STOCK ") || !String.valueOf(dialog.cbFirst.getSelectedItem()).equals("XBTUSD "))) {
             pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(dialog.getQuantitytext())));
             for (int j = 0; j < 2; j++) {
+                if (j == 1) {
+                    pr.setProperty("TRANS_ID", String.valueOf(++ID));
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 for (int i = 0; i < list.size(); i++) {
                     str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                 }
@@ -2888,8 +2897,8 @@ public class ParserApplication {
                     JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
                     e1.printStackTrace();
                 }
-                size += Integer.parseInt(dialog.getQuantitytext());
             }
+            size += Integer.parseInt(dialog.getQuantitytext()) * 2;
         }
     }
 
@@ -2898,6 +2907,14 @@ public class ParserApplication {
                 && (!String.valueOf(dialog.cbFirst.getSelectedItem()).equals("STOCK ") || !String.valueOf(dialog.cbFirst.getSelectedItem()).equals("XBTUSD "))) {
             pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(dialog.getQuantitytext())));
             for (int j = 0; j < 2; j++) {
+                if (j == 1) {
+                    pr.setProperty("TRANS_ID", String.valueOf(++ID));
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 for (int i = 0; i < list.size(); i++) {
                     str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                 }
@@ -2914,8 +2931,8 @@ public class ParserApplication {
                     JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
                     e1.printStackTrace();
                 }
-                size -= Integer.parseInt(dialog.getQuantitytext()) * 2;
             }
+            size -= Integer.parseInt(dialog.getQuantitytext()) * 2;
         }
     }
 
@@ -2923,9 +2940,13 @@ public class ParserApplication {
         if (token == false) {
             text.setText("Активируйте подписку (введите TOKEN в настройках)");
         }
-        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false) {
-            JettyApplication jettyApplication = new JettyApplication(tr,dialog);
-            jettyApplication.startServerJetty();
+        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false && JettyApplication.getStatusServer() != true) {
+            try {
+                JettyApplication jettyApplication = new JettyApplication(tr, dialog);
+                text.setText("Удалённый доступ запущен.Ещё раз нажмите кнопку START.");
+                jettyApplication.startServerJetty();
+            } catch (Exception e) {
+            }
         }
     }
 
@@ -2947,17 +2968,17 @@ public class ParserApplication {
                 } catch (Exception e) {
                     continue;
                 }
-                    if (item.contains("@Si")
-                            || item.equals("@RTS (RI)")
-                            || item.equals("@GOLD (GD)")
-                            || item.equals("@SBRF (SR)")
-                            || item.equals("@GAZR (GZ)")
-                            || item.equals("@MIX (MX)")
-                            || item.equals("@BR")
-                            || item.equals("@LKOH (LK)")) {
-                price = String.valueOf((int) Double.parseDouble(price.equals("N/A") ? "0" : price));
-                map.put(item, price);
-                    }
+                if (item.contains("@Si")
+                        || item.equals("@RTS (RI)")
+                        || item.equals("@GOLD (GD)")
+                        || item.equals("@SBRF (SR)")
+                        || item.equals("@GAZR (GZ)")
+                        || item.equals("@MIX (MX)")
+                        || item.equals("@BR")
+                        || item.equals("@LKOH (LK)")) {
+                    price = String.valueOf((int) Double.parseDouble(price.equals("N/A") ? "0" : price));
+                    map.put(item, price);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

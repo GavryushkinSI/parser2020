@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class JettyApplication {
-
+    static Server server = new Server();
     private static String orderSide = "";
     private static ParserApplication.Trade trade;
     private static ParserApplication.Dialog dialog;
@@ -40,7 +40,6 @@ public class JettyApplication {
     }
 
     public void startServerJetty() {
-        Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
         connector.setPort(80);
         server.addConnector(connector);
@@ -118,15 +117,18 @@ public class JettyApplication {
                 resp.getWriter().println("<body>");
                 resp.getWriter().println("<h1 style=\"color:blue;border-bottom: 2px solid maroon;\">DESKTOP VIEW</h1>");
                 resp.getWriter().println("<img style=\"width:700px;height:500px;margin-bottom:20px\" src=\"/image\">");
+                resp.getWriter().println("<form action=\"/r\"\"/example/\">\n" +
+                        "<button style=\"color:white;width:2px;height:2px;background:blue;font-size:30px;display: none\" type=\"submit\">REFRESH</button>\n" +
+                        "</form>");
+                resp.getWriter().println("<form action=\"/remote\"\"/example/\">\n" +
+                        "<button style=\"color:white;width:150px;height:50px;background:blue;font-size:30px;\" type=\"submit\">REFRESH</button>\n" +
+                        "</form>");
                 resp.getWriter().println("<form action=\"/buy\"\"/example/\">\n" +
                         "<button style=\"color:white;width:100px;height:50px;background:green;font-size:30px;\" type=\"submit\">BUY</button>\n" +
                         "</form>");
                 resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
                         "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">SELL</button>\n" +
                         "</form>");
-//                resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
-//                        "<button style=\"color:black;width:250px;height:50px;background:white;font-size:30px;\" type=\"submit\">ACTIVATE_AUTO</button>\n" +
-//                        "</form>");
                 resp.getWriter().println("<div id=\"chartContainer\" style=\"height: 300px; width: 700px;border: solid 2px #010522;\"></div>\n" +
                         "\n" +
                         "<script src=\"https://canvasjs.com/assets/script/canvasjs.min.js\"></script>\n" +
@@ -173,7 +175,7 @@ public class JettyApplication {
                         "                text: \"Equity\"\n" +
                         "            },\n" +
                         "            axisX: {\n" +
-                        "                title: \"Order Number      §\",\n" +
+                        "                title: \"Order Number\",\n" +
                         "                crosshair: {\n" +
                         "                    enabled: true,\n" +
                         "                    snapToDataPoint: true\n" +
@@ -291,5 +293,9 @@ public class JettyApplication {
          dialog.getBoxtrade().setState(true);
          dialog.save();
         }
+    }
+
+    public static boolean getStatusServer(){
+      return server.isStarted();
     }
 }

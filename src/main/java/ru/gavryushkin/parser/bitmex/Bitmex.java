@@ -22,7 +22,8 @@ public class Bitmex {
 
     private static RestTemplate restTemplate = new RestTemplate();
     private static String ApiKey = null;
-    private static String BASEPATH = "https://testnet.bitmex.com/api/v1";
+    //private static String BASEPATH = "https://testnet.bitmex.com/api/v1";
+    private static String BASEPATH="https://www.bitmex.com/api/v1";
 //    private final static String ID = "v0_GfasE_fVwbOEX5_PtTiPC";
 //    private final static String KEY = "6Z87UN9hJK-2jFnp-mgBlnznBPmOfHz7kKxvCb7t87MmjcBj";
 
