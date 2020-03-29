@@ -295,6 +295,7 @@ public class JettyApplication {
         }
     }
 
+    //Текущий статус сервера
     public static boolean getStatusServer(){
       return server.isStarted();
     }
