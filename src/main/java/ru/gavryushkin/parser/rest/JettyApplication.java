@@ -8,6 +8,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import ru.gavryushkin.parser.LineChart1;
 import ru.gavryushkin.parser.ParserApplication;
 import ru.gavryushkin.parser.model.Equity;
+import ru.gavryushkin.parser.model.OrderWebHook;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
@@ -31,12 +32,14 @@ public class JettyApplication {
     private static String orderSide = "";
     private static ParserApplication.Trade trade;
     private static ParserApplication.Dialog dialog;
+    private static ParserApplication.WebHooksModule webHooksModule;
     static ServletContextHandler context;
     static String HOST = "";
 
-    public JettyApplication(ParserApplication.Trade trade, ParserApplication.Dialog dialog) {
+    public JettyApplication(ParserApplication.Trade trade, ParserApplication.Dialog dialog, ParserApplication.WebHooksModule webHooksModule) {
         this.trade = trade;
-        this.dialog=dialog;
+        this.dialog = dialog;
+        this.webHooksModule = webHooksModule;
     }
 
     public void startServerJetty() {
@@ -46,6 +49,7 @@ public class JettyApplication {
         context = new ServletContextHandler();
         context.setContextPath("/");
         context.addServlet(WebHookServlet.class, "/webHook");
+        context.addServlet(CustomWebHookServlet.class, "/customWebHook");
         context.addServlet(RemoteServlet.class, "/remote");
         context.addServlet(ImageServlet.class, "/image");
         context.addServlet(BuyServlet.class, "/buy");
@@ -289,14 +293,52 @@ public class JettyApplication {
     private class ActivateAuto extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-         trade.setStatus(0);
-         dialog.getBoxtrade().setState(true);
-         dialog.save();
+            trade.setStatus(0);
+            dialog.getBoxtrade().setState(true);
+            dialog.save();
         }
     }
 
     //Текущий статус сервера
-    public static boolean getStatusServer(){
-      return server.isStarted();
+    public static boolean getStatusServer() {
+        return server.isStarted();
+    }
+
+    @SuppressWarnings("serial")
+    public static class CustomWebHookServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request,
+                             HttpServletResponse response) throws IOException {
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("text/html");
+            response.setCharacterEncoding("utf-8");
+            response.getWriter().println("<h1>Test Success Custom WebHook</h1>");
+        }
+
+        @Override
+        protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            response.setStatus(HttpServletResponse.SC_OK);
+            Scanner s = new Scanner(request.getInputStream());
+            String data = "";
+            while (s.hasNext()) {
+                data += s.next();
+            }
+            s.close();
+            write_file("server-log.txt", data);
+            OrderWebHook orderWebHook=null;
+            try {
+                orderWebHook = new Gson().fromJson(data, OrderWebHook.class);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            orderSide = orderWebHook.getOperation();
+            if (orderSide.equals("buy")) {
+                webHooksModule.sendSignalWebHook(1, orderWebHook);
+            } else if (orderSide.equals("sell")) {
+                webHooksModule.sendSignalWebHook(-1, orderWebHook);
+            } else if (orderSide.equals("hold")) {
+                webHooksModule.sendSignalWebHook(0, orderWebHook);
+            }
+        }
     }
 }

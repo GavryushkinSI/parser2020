@@ -23,10 +23,10 @@ public class Datasetp {
         dataset = new DefaultCategoryDataset();
         for (int i = -1; i < x.length - 1; i++) {
             if (i == -1) {
-                dataset.addValue(0, series1, String.valueOf(x[0]));
+                dataset.addValue(0, series1, new Integer(0));
             } else {
                 y += x[i] + x[i + 1];
-                dataset.addValue(y, series1, String.valueOf(x[i + 1]));
+                dataset.addValue(y, series1, String.valueOf(i + 1));
             }
         }
         return dataset;
@@ -62,5 +62,24 @@ public class Datasetp {
             list.add(point);
         }
         return list;
+    }
+
+    public static CategoryDataset createDataForEQWebHook(ArrayList<Integer> list) {
+
+        DefaultCategoryDataset dataset;
+
+        final String series1 = "EQ";
+        ArrayList<Integer> x=list;
+        int y = 0;
+        dataset = new DefaultCategoryDataset();
+        for (int i = -1; i < x.size(); i++) {
+            if (i == -1) {
+                dataset.addValue(0, series1, new Integer(0));
+            } else {
+                y = x.get(i) + y;
+                dataset.addValue(y, series1,String.valueOf(i+1));
+            }
+        }
+        return dataset;
     }
 }

@@ -20,7 +20,7 @@ import java.util.Random;
  * Класс тестов приложения
  */
 public class TestClass {
-    private static ParserApplication app = null;
+    private static ParserApplication app;
     private final static String URL = "http://localhost/webHook";
 
     @Before

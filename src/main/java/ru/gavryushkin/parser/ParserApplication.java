@@ -5,6 +5,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.gavryushkin.parser.bitmex.Bitmex;
+import ru.gavryushkin.parser.model.OrderWebHook;
 import ru.gavryushkin.parser.rest.JettyApplication;
 import ru.gavryushkin.parser.subscriber.Authorization;
 
@@ -41,26 +42,32 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
 
 public class ParserApplication {
-    JFrame frame;
+    static JFrame frame;
     JTabbedPane tabs;
     MyLabel screenLabel;
     JLabel screenLabel_2;
@@ -90,6 +97,7 @@ public class ParserApplication {
     JButton instrument;
     JButton equity;
     Dialog dialog;
+    static CustomWebHooksModule customWebHooksModule;
     Checkbox def_cor;
     volatile String price = String.valueOf(0);
     volatile String price_2, price_3;
@@ -104,6 +112,16 @@ public class ParserApplication {
     static String cashPrice = "";
     static JettyApplication jettyApplication;
     static boolean token;
+    static Map<String, String> map;
+    static Map<String, String> infoPrice;
+    Color dark=new Color(2, 2, 2, 179);
+    Color col1=new Color(52, 105, 184);;
+    Color blueDark=new Color(34,69,112);
+    Color darkLight=new Color(53,58,58, 186);
+    Color green=new Color(24,143,57);
+    Color red=new Color(202,52,59);
+    Color blueLight=new Color(24,117,116);
+    static boolean STATE=false;
 
     //Парсинг цены с сайта Finam
     public void getPrice() {
@@ -130,8 +148,8 @@ public class ParserApplication {
 //                        buffer = new StringBuffer(doc.text());
 //                        buffer_2 = new StringBuffer(doc_2.text());
                         //Наполнение карты (ComboBox)
-                        Map<String, String> infoPrice = getInfoPrice();
-                        Map<String, String> map = new HashMap<String, String>();
+                        infoPrice = getInfoPrice();
+                        map = new HashMap<String, String>();
                         try {
                             map.put(elements[0], infoPrice.get("@Si"));
                             map.put(elements[1], infoPrice.get("@RTS (RI)"));
@@ -178,7 +196,7 @@ public class ParserApplication {
 //                    System.out.println("//**************************//");
 
                         if (work == false && size == 0) {
-                            text.setText("TS:" + (dialog.cbFirst.getSelectedItem()) +
+                            text.setText("TS: " + (dialog.cbFirst.getSelectedItem() + " ") +
                                     map.get(dialog.cbFirst.getSelectedItem()));
                         }
                         long en = System.nanoTime();
@@ -227,6 +245,7 @@ public class ParserApplication {
     public String[] elements = null;
 
     Trade tr;
+    WebHooksModule wb;
     Thread mythread;
 
     @SuppressWarnings("serial")
@@ -395,9 +414,9 @@ public class ParserApplication {
             y += x_toint[i] + x_toint[i + 1];
         }
         if (y < 0)
-            equity.setBackground(new Color(255, 51, 35));
+            equity.setBackground(red);
         else if (y > 0) {
-            equity.setBackground(new Color(86, 210, 17));
+            equity.setBackground(green);
         } else if (y == 0) {
             equity.setBackground(new Color(102, 163, 210));
         }
@@ -431,8 +450,20 @@ public class ParserApplication {
             text.setText("Ошибка загрузки шаблона JTATOO");
             e.printStackTrace();
         }
-
         dialog = new Dialog(frame, "Settings");
+        customWebHooksModule = new CustomWebHooksModule(dialog);
+        try {
+            customWebHooksModule.init();
+//            customWebHooksModule.getFrame().setVisible(false);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
         ImageIcon icon_2 = new ImageIcon("image_set.png");
         dialog.setIconImage(icon_2.getImage());
         /**Инициализация почтового модуля
@@ -455,7 +486,7 @@ public class ParserApplication {
             }
 
             public void windowClosing(WindowEvent event) {
-                Object[] options = {"Да", "Нет"};
+                Object[] options = {"Да","Нет"};
                 int n = JOptionPane
                         .showOptionDialog(event.getWindow(), "Выйти из программы?",
                                 "Message", JOptionPane.YES_NO_OPTION,
@@ -466,6 +497,7 @@ public class ParserApplication {
                     event.getWindow().setVisible(false);
                     System.exit(0);
                 }
+                customWebHooksModule.save(customWebHooksModule.getMap());
             }
 
             @Override
@@ -495,8 +527,6 @@ public class ParserApplication {
         });
         //****Подтверждение закрытия окна**//////////////////
         //Меню бара
-        My_JMenuBar menu = new My_JMenuBar();
-        frame.setJMenuBar(menu);
         //frame.getContentPane().setBackground(new Color(2, 2, 2, 201));
         frame.getContentPane().setLayout(new BorderLayout());
         text = new JTextField();
@@ -507,14 +537,15 @@ public class ParserApplication {
         panel = new JPanel();
         panel.setLayout(new GridLayout(13, 1));
         frame.getContentPane().add(panel, BorderLayout.EAST);
+//        frame.getContentPane().setBackground(new Color(16, 75, 194, 170));
         //Наполнение вкладки TAB  и подключение слушателей
         screenLabel = new MyLabel();
         screenLabel_2 = new JLabel();
         screenScroll = new JScrollPane(screenLabel);
         screenScroll_2 = new JScrollPane(screenLabel_2);
+        screenLabel.setIcon(new ImageIcon("icon/intro.png"));
         tabs.add("FullScreen", screenScroll);
         tabs.add("ScreenArea", screenScroll_2);
-
         tabs.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -530,7 +561,11 @@ public class ParserApplication {
         });
 //      Кнопка скрина и слушатель для нее
         butscreen = new JButton("SCREEN");
+        butscreen.setBackground(blueDark);
+        butscreen.setForeground(Color.white);
         start = new JButton("START");
+        start.setBackground(blueDark);
+        start.setForeground(Color.white);
         start.addMouseListener(new ListnerButtonStart());
         stop = new JButton("STOP");
         stop.addMouseListener(new MouseAdapter() {
@@ -567,7 +602,8 @@ public class ParserApplication {
                 status_4 = 0;
                 status_5 = 0;
                 text.setText("Работа остановлена, файлы tri,tro,trr очищены!");
-                text.setBackground(Color.WHITE);
+                text.setBackground(dark);
+                text.setText("Режим WebHooks запущен...");
             }
         });
         butscreen.addMouseListener(new ScreenLister());
@@ -576,15 +612,15 @@ public class ParserApplication {
         panel.add(stop);
         //Формируем список доступных инструменто
         elements = new String[]{
-                "Si RUB ",
-                "RTS RUB ",
-                "LKON RUB ",
-                "BR RUB ",
-                "GAZP RUB ",
-                "GOLD RUB ",
-                "MOEX RUB ",
-                "MIX RUB ",
-                "SBER RUB ",
+                "SI",
+                "RTS",
+                "LKON",
+                "BR",
+                "GAZP",
+                "GOLD",
+                "MOEX",
+                "MIX",
+                "SBER",
                 "STOCK ",
                 "XBTUSD "};
         //*************************************************************************//
@@ -600,15 +636,21 @@ public class ParserApplication {
         cond_1 = new JButton("cond_1   ");
         cond_2 = new JButton("cond_2   ");
         option = new JButton("SET");
-        trade1 = new JButton("B");
+
+        option.setBackground(blueDark);
+        option.setForeground(Color.white);
+        trade1 = new JButton(new ImageIcon("icon/icons8-top-19.png"));
         instrument = new JButton(dialog.seccodetext.getText());
         instrument.setForeground(Color.BLUE);
-        trade2 = new JButton("S");
+        trade2 = new JButton(new ImageIcon("icon/icons8-bottom-19.png"));
         trade3 = new JButton("  H  ");
-        equity = new JButton("Equity");
+        equity = new JButton("EQ",new ImageIcon("icon/icons8-eq-15.png"));
         //martin=new JButton("MaRtiN...");
         def_cor = new Checkbox();
         tr = new Trade();
+        wb = new WebHooksModule();
+        My_JMenuBar menu = new My_JMenuBar(customWebHooksModule,wb);
+        frame.setJMenuBar(menu);
 //        Cоздание диалогового окна
         option.addMouseListener(new MouseAdapter() {
             @Override
@@ -658,7 +700,9 @@ public class ParserApplication {
 //            panel.add(cond_2);
 
         panel.add(option);
-        panel.setBackground(new Color(2, 2, 2, 179));
+         panel.setBackground(dark);
+         text.setBackground(dark);
+        text.setForeground(Color.white);
         //panel.add(info);
         //panel.add(instrument);
         instrument.addMouseListener(new MouseAdapter() {
@@ -699,7 +743,7 @@ public class ParserApplication {
                 //status=1;
                 //size=size+Integer.parseInt(dialog.getQuantitytext());
                 text.setText("Покупка");
-                text.setText("Лотов в сделке: " + size);
+                //text.setText("Лотов в сделке: " + size);
             }
         });
         panel.add(trade2);
@@ -709,7 +753,7 @@ public class ParserApplication {
             public void mouseClicked(MouseEvent e) {
                 tr.Order_S();
                 text.setText("Продажа");
-                text.setText("Лотов в сделке: " + size);
+                //text.setText("Лотов в сделке: " + size);
 
             }
         });
@@ -728,10 +772,9 @@ public class ParserApplication {
             public void mouseClicked(MouseEvent e) {
                 try {
                     equity.setText(String.valueOf(read_file("data.txt")));
-                    new LineChart1("Equity").create_graphics();
+                    new LineChart1("Equity",null).create_graphics("Equity",null);
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    text.setText(("Ошибка загрузки графика Equity"));
                     equity.setText("0");
                     equity.setBackground(new Color(102, 163, 210));
                 }
@@ -912,9 +955,11 @@ public class ParserApplication {
             }
             //Инициализация режима WebHooks
             if (work != false && dialog.webHooksMode.isSelected() == true && token != false && JettyApplication.getStatusServer() != true) {
+                STATE=true;
+                screenLabel.setIcon(new ImageIcon("icon/hook.png"));
                 text.setText("Режим WebHooks запущен...");
                 try {
-                    jettyApplication = new JettyApplication(tr, dialog);
+                    jettyApplication = new JettyApplication(tr, dialog, wb);
                     jettyApplication.startServerJetty();
                 } catch (Exception e) {
                 }
@@ -1366,27 +1411,35 @@ public class ParserApplication {
 
         public Dialog(Frame owner, String title) {
             super(owner, title);
-            tokenLabel = new JLabel("TOKEN(ключ авторизации)");
+            tokenLabel = new JLabel(" TOKEN(ключ авторизации)");
             tokenField = new JTextField(15);
-            text1 = new JLabel("Phone number(для смс)");
+            text1 = new JLabel(" Phone number(для смс)");
             phone = new JTextField(15);
-            phone.setBackground(new Color(102, 163, 210));
-            text2 = new JLabel("Mail (Yandex,Gmail)");
-            text5 = new JLabel("Password E-mail");
-            text3 = new JLabel("Phone Login(для смс)");
-            text4 = new JLabel("Phone Passwod(для смс");
+            phone.setBackground(darkLight);
+            phone.setForeground(Color.white);
+            text2 = new JLabel(" Mail (Yandex,Gmail)");
+            text5 = new JLabel(" Password E-mail");
+            text3 = new JLabel(" Phone Login(для смс)");
+            text4 = new JLabel(" Phone Passwod(для смс");
             login = new JTextField(15);
-            login.setBackground(new Color(102, 163, 210));
+            login.setBackground(darkLight);
+            login.setForeground(Color.white);
             password = new JTextField(15);
             password.setBackground(new Color(102, 163, 210));
+            password.setBackground(darkLight);
+            password.setForeground(Color.white);
             passmail = new JTextField(15);
             mail = new JTextField(15);
-            boxmail = new Checkbox("E-Mail");
-            boxphone = new Checkbox("Phone");
-            boxtrade = new Checkbox("Terminal");
-            screenmail = new Checkbox("Screen");
+            boxmail = new Checkbox(" E-Mail");
+            boxphone = new Checkbox(" Phone");
+            boxtrade = new Checkbox(" Terminal");
+            screenmail = new Checkbox(" Screen");
             button = new JButton("SAVE");
+            button.setBackground(dark);
+            button.setForeground(Color.white);
             button_1 = new JButton("SKIP COLOR");
+            button_1.setBackground(dark);
+            button_1.setForeground(Color.white);
             accounttext = new JTextField(15);
             accounttext_2 = new JTextField(15);
             clientcodetext = new JTextField(8);
@@ -1399,18 +1452,18 @@ public class ParserApplication {
             delta = new JTextField(3);
             delta_2 = new JTextField(3);
             delta_3 = new JTextField(3);
-            accountlab = new JLabel("Account_Forts(счёт фортс)");
-            accountlab_2 = new JLabel("Account_Stocks(счёт ММВБ)");
-            clientcodelab = new JLabel("Code client(код клиента)");
-            seccodelab1 = new JLabel("Secode_1(код инстурумента)");
-            seccodelab2 = new JLabel("Secode_2");
-            seccodelab3 = new JLabel("Secode_3");
-            quantitylab1 = new JLabel("Quantity_1(кол-во лотов)");
-            quantitylab2 = new JLabel("Quantity_2");
-            quantitylab3 = new JLabel("Quantity_3");
-            deltalab1 = new JLabel("Delta_1(проскальзывание)");
-            deltalab2 = new JLabel("Delta_2");
-            deltalab3 = new JLabel("Delta_3");
+            accountlab = new JLabel(" Account_Forts(счёт фортс)");
+            accountlab_2 = new JLabel(" Account_Stocks(счёт ММВБ)");
+            clientcodelab = new JLabel(" Code client(код клиента)");
+            seccodelab1 = new JLabel(" Secode_1(код инстурумента)");
+            seccodelab2 = new JLabel(" Secode_2");
+            seccodelab3 = new JLabel(" Secode_3");
+            quantitylab1 = new JLabel(" Quantity_1(кол-во лотов)");
+            quantitylab2 = new JLabel(" Quantity_2");
+            quantitylab3 = new JLabel(" Quantity_3");
+            deltalab1 = new JLabel(" Delta_1(проскальзывание)");
+            deltalab2 = new JLabel(" Delta_2");
+            deltalab3 = new JLabel(" Delta_3");
             cbModel = new DefaultComboBoxModel<String>();
             cbModel_2 = new DefaultComboBoxModel<String>();
             cbModel_3 = new DefaultComboBoxModel<String>();
@@ -1436,23 +1489,27 @@ public class ParserApplication {
                     delta_3.setText(map_delta.get((String) dialog.cbThird.getSelectedItem()));
                 }
             });
-            type = new JLabel("TYPE_1(тип инструмента)");
-            type_2 = new JLabel("TYPE_2");
-            type_3 = new JLabel("TYPE_3");
-            idLabel = new JLabel("ID(BITMEX)");
+            type = new JLabel(" TYPE_1(тип инструмента)");
+            type_2 = new JLabel(" TYPE_2");
+            type_3 = new JLabel(" TYPE_3");
+            idLabel = new JLabel(" ID(BITMEX)");
             idField = new JTextField();
-            idField.setBackground(new Color(136, 210, 169));
-            keyLabel = new JLabel("KEY(BITMEX)");
+            idField.setBackground(darkLight);
+            idField.setForeground(Color.white);
+            keyLabel = new JLabel(" KEY(BITMEX)");
             keyField = new JTextField();
-            keyField.setBackground(new Color(136, 210, 169));
-            testBitmexLabel = new JLabel("Тест соединения с Bitmex");
+            keyField.setBackground(darkLight);
+            keyField.setForeground(Color.white);
+            testBitmexLabel = new JLabel(" Тест соединения с Bitmex");
             testBitmexButton = new JButton("Click for TEST");
+            testBitmexButton.setBackground(dark);
+            testBitmexButton.setForeground(Color.white);
             separateOrderCheckBox = new JCheckBox();
-            separateOrderLabel = new JLabel("Деление ордера");
-            separateOrderLabel.setForeground(Color.red);
+            separateOrderLabel = new JLabel(" Деление ордера");
+            separateOrderLabel.setForeground(red);
             webHooksMode = new JCheckBox();
-            webHooksModeLabel = new JLabel("Включить режим WebHooks");
-            remoteAccessLabel = new JLabel("Удаленный доступ");
+            webHooksModeLabel = new JLabel(" Включить режим WebHooks");
+            remoteAccessLabel = new JLabel(" Удаленный доступ");
             remoteAccessCheck = new JCheckBox();
             fill_mapdelta();
             loadoption();
@@ -1460,15 +1517,15 @@ public class ParserApplication {
 
         void fill_mapdelta() {
             map_delta = new HashMap<>();
-            map_delta.put("Si RUB ", "350");
-            map_delta.put("RTS RUB ", "1000");
-            map_delta.put("LKON RUB ", "800");
-            map_delta.put("BR RUB ", "1");
-            map_delta.put("GAZP RUB ", "200");
-            map_delta.put("GOLD RUB ", "10");
-            map_delta.put("MOEX RUB ", "320");
-            map_delta.put("MIX RUB ", "900");
-            map_delta.put("SBER RUB ", "350");
+            map_delta.put("SI", "350");
+            map_delta.put("RTS", "1000");
+            map_delta.put("LKON", "800");
+            map_delta.put("BR", "1");
+            map_delta.put("GAZP", "200");
+            map_delta.put("GOLD", "10");
+            map_delta.put("MOEX", "320");
+            map_delta.put("MIX", "900");
+            map_delta.put("SBER", "350");
             map_delta.put("STOCK ", "0");
             map_delta.put("XBTUSD ", "");
         }
@@ -1689,12 +1746,12 @@ public class ParserApplication {
                 public void mouseClicked(MouseEvent e) {
                     try {
                         if (Bitmex.getUser(idField.getText(), keyField.getText()) == 200) {
-                            testBitmexButton.setBackground(new Color(86, 210, 17));
+                            testBitmexButton.setBackground(green);
                             text.setText("Удачное подключение к Bitmex");
                         }
                     } catch (Exception e1) {
                         text.setText("Ошибка подключения к Bitmex");
-                        testBitmexButton.setBackground(new Color(210, 29, 22));
+                        testBitmexButton.setBackground(red);
                         e1.printStackTrace();
                     }
                 }
@@ -1830,6 +1887,14 @@ public class ParserApplication {
             getContentPane().add(field);
             setVisible(true);
         }*/
+
+        public JTextField getAccounttext_2() {
+            return accounttext_2;
+        }
+
+        public void setAccounttext_2(JTextField accounttext_2) {
+            this.accounttext_2 = accounttext_2;
+        }
 
         public boolean isSend_mail() {
             return boxmail.getState();
@@ -2168,6 +2233,9 @@ public class ParserApplication {
         private Properties pr = new Properties();
         private ArrayList<String> list = new ArrayList<>();
 
+        public ArrayList<String> getList() {
+            return list;
+        }
 
         public Trade() {
             list.add(field_1);
@@ -2607,7 +2675,7 @@ public class ParserApplication {
                     price_order = price;
                 }
                 delta_order = dialog.getDelta();
-                System.out.println("price order " + price_order);
+                System.out.println("price order buy " + price_order);
                 pr.setProperty("PRICE", String.valueOf(Integer.parseInt(price_order) + Integer.parseInt(delta_order)));
                 pr.setProperty("CLASSCODE", code);
                 pr.setProperty("ACCOUNT", account);
@@ -2619,7 +2687,7 @@ public class ParserApplication {
                 for (int i = 0; i < list.size(); i++) {
                     str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                 }
-                size += 1;
+                //size += 1;
                 try {
                     BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
                     writer.write(str + "\r\n");
@@ -2640,7 +2708,7 @@ public class ParserApplication {
                             dialog.idField.getText(),
                             dialog.keyField.getText(),
                             "1");
-                    size += 1;
+                    //size += 1;
                     text.setText("Покупка");
                 } catch (Exception e) {
                     text.setText("Ошибка ручного вытсавления заявки на Bitmex");
@@ -2666,6 +2734,7 @@ public class ParserApplication {
                 }
 
                 delta_order = dialog.getDelta();
+                System.out.println("price order sell " + price_order);
                 pr.setProperty("PRICE", String.valueOf(Integer.parseInt(price_order) - Integer.parseInt(delta_order)));
                 pr.put("CLASSCODE", code);
                 pr.put("ACCOUNT", account);
@@ -2677,7 +2746,7 @@ public class ParserApplication {
                 for (int i = 0; i < list.size(); i++) {
                     str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
                 }
-                size += -1;
+                //size += -1;
                 try {
                     BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
                     writer.write(str + "\r\n");
@@ -2698,7 +2767,7 @@ public class ParserApplication {
                             dialog.idField.getText(),
                             dialog.keyField.getText(),
                             "1");
-                    size -= 1;
+                    //size -= 1;
                     text.setText("Продажа");
                 } catch (Exception e) {
                     text.setText("Ошибка ручного выcтавления заявки на Bitmex");
@@ -2940,9 +3009,9 @@ public class ParserApplication {
         if (token == false) {
             text.setText("Активируйте подписку (введите TOKEN в настройках)");
         }
-        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false && JettyApplication.getStatusServer() != true) {
+        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false && STATE!=true) {
             try {
-                JettyApplication jettyApplication = new JettyApplication(tr, dialog);
+                JettyApplication jettyApplication = new JettyApplication(tr, dialog, wb);
                 text.setText("Удалённый доступ запущен.Ещё раз нажмите кнопку START.");
                 jettyApplication.startServerJetty();
             } catch (Exception e) {
@@ -2950,40 +3019,655 @@ public class ParserApplication {
         }
     }
 
+    //    public Map<String, String> getInfoPrice() {
+//        String price = "";
+//        String item = "";
+//        Map<String, String> map = new HashMap<>();
+//        try {
+//            Document doc = Jsoup.connect("http://mfd.ru/marketdata/?id=8&mode=3&group=26").maxBodySize(0).get();
+//            Element table = doc.select("table").first(); //находим первую таблицу в документе
+//            //если надо вторую, третью или т.д. используем .get(номер)
+//            Elements rows = table.select("tr");// разбиваем нашу таблицу на строки по тегу
+//            for (int i = 1; i < rows.size(); i++) {
+//                Element row = rows.get(i); //по номеру индекса получает строку
+//                Elements cols = row.select("td");// разбиваем полученную строку по тегу  на столбы{
+//                try {
+//                    price = cols.get(2).text().replace(" ", "");
+//                    item = cols.get(0).text();
+//                } catch (Exception e) {
+//                    continue;
+//                }
+//                if (item.contains("@Si")
+//                        || item.equals("@RTS (RI)")
+//                        || item.equals("@GOLD (GD)")
+//                        || item.equals("@SBRF (SR)")
+//                        || item.equals("@GAZR (GZ)")
+//                        || item.equals("@MIX (MX)")
+//                        || item.equals("@BR")
+//                        || item.equals("@LKOH (LK)")) {
+//                    price = String.valueOf((int) Double.parseDouble(price.equals("N/A") ? "0" : price));
+//                    map.put(item, price);
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        map.forEach((k, v) -> System.out.println("Item : " + k + " Price : " + v));
+//        return map;
+//    }
+    //Альтернатива без ограничения инструментов
     public Map<String, String> getInfoPrice() {
         String price = "";
         String item = "";
         Map<String, String> map = new HashMap<>();
+        List<String> listParsePrice = Arrays.asList(
+                "http://mfd.ru/marketdata/?id=5&mode=1",
+                "http://mfd.ru/marketdata/?id=8&mode=1",
+                "http://mfd.ru/marketdata/?id=8&mode=3&group=26"
+        );
         try {
-            Document doc = Jsoup.connect("http://mfd.ru/marketdata/?id=8&mode=3&group=26").maxBodySize(0).get();
-            Element table = doc.select("table").first(); //находим первую таблицу в документе
-            //если надо вторую, третью или т.д. используем .get(номер)
-            Elements rows = table.select("tr");// разбиваем нашу таблицу на строки по тегу
-            for (int i = 1; i < rows.size(); i++) {
-                Element row = rows.get(i); //по номеру индекса получает строку
-                Elements cols = row.select("td");// разбиваем полученную строку по тегу  на столбы{
-                try {
-                    price = cols.get(2).text().replace(" ", "");
-                    item = cols.get(0).text();
-                } catch (Exception e) {
-                    continue;
-                }
-                if (item.contains("@Si")
-                        || item.equals("@RTS (RI)")
-                        || item.equals("@GOLD (GD)")
-                        || item.equals("@SBRF (SR)")
-                        || item.equals("@GAZR (GZ)")
-                        || item.equals("@MIX (MX)")
-                        || item.equals("@BR")
-                        || item.equals("@LKOH (LK)")) {
-                    price = String.valueOf((int) Double.parseDouble(price.equals("N/A") ? "0" : price));
-                    map.put(item, price);
+            for (String itemList : listParsePrice) {
+                Document doc = Jsoup.connect(itemList).maxBodySize(0).get();
+                Element table = doc.select("table").first(); //находим первую таблицу в документе
+                //если надо вторую, третью или т.д. используем .get(номер)
+                Elements rows = table.select("tr");// разбиваем нашу таблицу на строки по тегу
+                for (int i = 1; i < rows.size(); i++) {
+                    Element row = rows.get(i); //по номеру индекса получает строку
+                    Elements cols = row.select("td");// разбиваем полученную строку по тегу  на столбы{
+                    try {
+                        price = cols.get(2).text().replace(" ", "");
+                        item = cols.get(0).text();
+                        price = String.valueOf((int) Double.parseDouble(price.equals("N/A") ? "0" : price));
+                        map.put(item.replace(" ", ""), price);
+                    } catch (Exception e) {
+                        continue;
+                    }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        map.forEach((k, v) -> System.out.println("Item : " + k + " Price : " + v));
+        //map.forEach((k, v) -> System.out.println("Item : " + k + " Price : " + v));
         return map;
     }
+//*************************************************************************
+
+    /**
+     * Модуль по работе с WebHooks (для кастомных вебхуков)
+     */
+    public class WebHooksModule {
+        private Properties pr = new Properties();
+        private ArrayList<String> listField = tr.getList();
+        private ArrayList<String> buyList = initOrderList()[0];
+        private ArrayList<String> sellList = initOrderList()[1];
+        private ArrayList<String> holdList = initOrderList()[2];
+
+        public ArrayList<String> getBuyList() {
+            return buyList;
+        }
+
+        public void setBuyList(ArrayList<String> buyList) {
+            this.buyList = buyList;
+        }
+
+        public ArrayList<String> getSellList() {
+            return sellList;
+        }
+
+        public void setSellList(ArrayList<String> sellList) {
+            this.sellList = sellList;
+        }
+
+        public ArrayList<String> getHoldList() {
+            return holdList;
+        }
+
+        public void setHoldList(ArrayList<String> holdList) {
+            this.holdList = holdList;
+        }
+
+        public synchronized void sendSignalWebHook(int position, OrderWebHook order) {
+            ArrayList<Integer> mapEq=null;
+            Map<String, String> mapPrice = customWebHooksModule.getPriceFromQuik();
+//            mapPrice.put("SI", String.valueOf(60000+new Random().nextInt(2500)));
+//            mapPrice.put("BR", String.valueOf(15+new Random().nextInt(5)));
+            mapPrice.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
+            DesktopObject obj = getDetails(order.getNameTs(), customWebHooksModule.getMap());
+            if (position == 1 && buyList.contains(obj.getName().getText()) != true) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (sellList.contains(obj.getName().getText()) == true) {
+                        status = -1;
+                        if(obj.getjCheckBox().isSelected()) {
+                            buyWebHook(obj, order, status, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        buyList.add(obj.getName().getText());
+                        sellList.remove(obj.getName().getText());
+                    } else {
+                        status = 0;
+                        if(obj.getjCheckBox().isSelected()) {
+                            buyWebHook(obj, order, status, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        buyList.add(obj.getName().getText());
+                    }
+                    holdList.remove(obj.getName().getText());
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(),obj);
+                    customWebHooksModule.save(s);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("BUY", "TS_1: Buy in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+
+            } else if (position == -1 && sellList.contains(obj.getName().getText()) != true) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (buyList.contains(obj.getName().getText()) == true) {
+                        status = 1;
+                        if(obj.getjCheckBox().isSelected()) {
+                            sellWebHook(order, status, obj, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        sellList.add(obj.getName().getText());
+                        buyList.remove(obj.getName().getText());
+                    } else {
+                        status = 0;
+                        if(obj.getjCheckBox().isSelected()) {
+                            sellWebHook(order, status, obj, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        sellList.add(obj.getName().getText());
+                    }
+                    holdList.remove(obj.getName().getText());
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(),obj);
+                    customWebHooksModule.save(s);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("SELL", "TS_1: Sell in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+            } else if (position == 0 && holdList.contains(obj.getName().getText()) != true) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (buyList.contains(obj.getName().getText()) == true) {
+                        status = 1;
+                        if(obj.getjCheckBox().isSelected()) {
+                            holdWebHook(order, status, obj, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        HashMap<Integer,DesktopObject> s=new HashMap<>();
+                        s.put(obj.getIdObject(),obj);
+                        customWebHooksModule.save(s);
+                    } else if (sellList.contains(obj.getName().getText()) == true) {
+                        status = -1;
+                        if(obj.getjCheckBox().isSelected()) {
+                            holdWebHook(order, status, obj, mapPrice);
+                        }
+                        mapPrice=customWebHooksModule.getPriceFromQuik();
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                        s.put(obj.getIdObject(),obj);
+                        customWebHooksModule.save(s);
+                    }
+                    sellList.remove(obj.getName().getText());
+                    buyList.remove(obj.getName().getText());
+                    holdList.add(obj.getName().getText());
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+            }
+            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList);
+        }
+
+        /**
+         * Вебухуки с докупкой и допродажей
+         * @param position
+         * @param order
+         */
+        public synchronized void sendSignalWebHookPyramiding(int position, OrderWebHook order) {
+            ArrayList<Integer> mapEq=null;
+            Map<String, String> mapPrice = customWebHooksModule.getPriceFromQuik();
+//            mapPrice.put("SI", String.valueOf(60000+new Random().nextInt(2500)));
+//            mapPrice.put("BR", String.valueOf(15+new Random().nextInt(5)));
+            mapPrice.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
+            DesktopObject obj = getDetails(order.getNameTs(), customWebHooksModule.getMap());
+            if (position == 1) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (sellList.contains(obj.getName().getText()) == true) {
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        status = -1;
+                        buyList.add(obj.getName().getText());
+                        sellList.remove(obj.getName().getText());
+                    } else {
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        status = 0;
+                        buyList.add(obj.getName().getText());
+                    }
+                    holdList.remove(obj.getName().getText());
+                    if(obj.getjCheckBox().isSelected()) {
+                        buyWebHook(obj, order, status, mapPrice);
+                    }
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(),obj);
+                    customWebHooksModule.save(s);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("BUY", "TS_1: Buy in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+
+            } else if (position == -1) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (buyList.contains(obj.getName().getText()) == true) {
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        status = 1;
+                        sellList.add(obj.getName().getText());
+                        buyList.remove(obj.getName().getText());
+                    } else {
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        status = 0;
+                        sellList.add(obj.getName().getText());
+                    }
+                    holdList.remove(obj.getName().getText());
+                    if(obj.getjCheckBox().isSelected()) {
+                        sellWebHook(order, status, obj, mapPrice);
+                    }
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(),obj);
+                    customWebHooksModule.save(s);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("SELL", "TS_1: Sell in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+            } else if (position == 0) {
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Quik")) {
+                    if (buyList.contains(obj.getName().getText()) == true) {
+                        status = 1;
+                        mapEq=obj.getEq().getS();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                        obj.getEq().setS(mapEq);
+                        HashMap<Integer,DesktopObject> s=new HashMap<>();
+                        s.put(obj.getIdObject(),obj);
+                        customWebHooksModule.save(s);
+                    } else if (sellList.contains(obj.getName().getText()) == true) {
+                        mapEq=obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        obj.getEq().setB(mapEq);
+                        HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
+                        s.put(obj.getIdObject(),obj);
+                        customWebHooksModule.save(s);
+                        status = -1;
+                    }
+                    sellList.remove(obj.getName().getText());
+                    buyList.remove(obj.getName().getText());
+                    holdList.add(obj.getName().getText());
+                    if(obj.getjCheckBox().isSelected()) {
+                        holdWebHook(order, status, obj, mapPrice);
+                    }
+                    serializeBuy(buyList);
+                    serializeSell(sellList);
+                    serializeHold(holdList);
+                }
+                if (obj.getTarget().getLabel()
+                        .equals("All") || obj.getTarget().getLabel()
+                        .equals("Mail")) {
+                    test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
+                }
+            }
+            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList);
+        }
+
+        private synchronized void buyWebHook(DesktopObject obj, OrderWebHook order, int status, Map<String, String> price) {
+            pr.put("TYPE", "M");
+            pr.put("TRANS_ID", "0");
+            pr.put("ACTION", "NEW_ORDER");
+            pr.setProperty("ACCOUNT", obj.getAccount().getText());
+            pr.setProperty("CLIENT_CODE", obj.getClientCode().getText());
+            pr.setProperty("CLASSCODE", obj.getType().getSelectedItem().toString());
+            pr.setProperty("SECCODE", obj.getSeccode().getText());
+            pr.setProperty("OPERATION", "B");
+            try {
+                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())):"0");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(new JFrame("Message"), "Код интсрумента не найден");
+            }
+            pr.setProperty("TRANS_ID", String.valueOf(++ID));
+            String str = "";
+            if (status == -1) {
+                if(dialog.getSeparateOrderCheckBox().isSelected() == Boolean.FALSE) {
+                    pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2));
+                    for (int i = 0; i < pr.size(); i++) {
+                        str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                    }
+                }
+                separateBuyOrderWebHook(pr,listField,str,status);
+            }
+            if (status == 0) {
+                pr.setProperty("QUANTITY",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(obj.getQuantity().getText())):"0");
+                for (int i = 0; i < listField.size(); i++) {
+                    str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                }
+                size += Integer.parseInt(obj.getQuantity().getText());
+            }
+//            //Деление реверсивного ордера
+//            separateBuyOrder(pr, listField, str);
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                writer.write(str + "\r\n");
+                writer.flush();
+                writer.close();
+                text.setText("Покупка...");
+                text.setText("Режим WebHooks активирован...");
+            } catch (IOException e1) {
+                test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                e1.printStackTrace();
+            }
+        }
+
+        private synchronized void sellWebHook(OrderWebHook order, int status, DesktopObject obj, Map<String, String> price) {
+            pr.put("TYPE", "M");
+            pr.put("TRANS_ID", "0");
+            pr.put("ACTION", "NEW_ORDER");
+            pr.setProperty("ACCOUNT", obj.getAccount().getText());
+            pr.setProperty("CLIENT_CODE", obj.getClientCode().getText());
+            pr.setProperty("CLASSCODE", obj.getType().getSelectedItem().toString());
+            pr.setProperty("SECCODE", obj.getSeccode().getText());
+            pr.setProperty("OPERATION", "S");
+            pr.setProperty("TRANS_ID", String.valueOf(++ID));
+            try {
+
+                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())):"0");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(new JFrame("Message"), "Код инструмента не найден");
+            }
+            String str = "";
+            if (status == 1) {
+                if(dialog.getSeparateOrderCheckBox().isSelected() == false){
+                    pr.setProperty("QUANTITY", obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2):"0");
+                    for (int i = 0; i < listField.size(); i++) {
+                        str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                    }
+                }
+                separateSellOrderWebHook(pr,listField,str,status);
+            }
+            if (status == 0) {
+                pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
+                for (int i = 0; i < listField.size(); i++) {
+                    str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                }
+                size -= Integer.parseInt(obj.getQuantity().getText());
+            }
+//                separateSellOrder(pr, listField, str);
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                writer.write(str + "\r\n");
+                writer.flush();
+                writer.close();
+                text.setText("Продажа...");
+                text.setText("Режим WebHooks активирован...");
+            } catch (IOException e1) {
+                test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                e1.printStackTrace();
+            }
+        }
+
+        private synchronized void holdWebHook(OrderWebHook order, int status, DesktopObject obj, Map<String, String> price) {
+            pr.put("TYPE", "M");
+            pr.put("TRANS_ID", "0");
+            pr.put("ACTION", "NEW_ORDER");
+            pr.setProperty("ACCOUNT", obj.getAccount().getText());
+            pr.setProperty("CLIENT_CODE", obj.getClientCode().getText());
+            pr.setProperty("CLASSCODE", obj.getType().getSelectedItem().toString());
+            pr.setProperty("SECCODE", obj.getSeccode().getText());
+            pr.setProperty("TRANS_ID", String.valueOf(++ID));
+            String str = "";
+            if (status == 1) {
+                pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
+                pr.setProperty("OPERATION", "S");
+                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())):"0");
+                for (int i = 0; i < listField.size(); i++) {
+                    str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                }
+                size -= Integer.parseInt(obj.getQuantity().getText());
+            } else if (status == -1) {
+                pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
+                pr.setProperty("OPERATION", "B");
+                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())):"0");
+                for (int i = 0; i < listField.size(); i++) {
+                    str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
+                }
+                size += Integer.parseInt(obj.getQuantity().getText());
+            }
+
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                writer.write(str + "\r\n");
+                writer.flush();
+                writer.close();
+                text.setText("Выход из позиции...");
+                text.setText("Режим WebHooks активирован...");
+            } catch (IOException e1) {
+                test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                e1.printStackTrace();
+            }
+        }
+    }
+
+    private void separateSellOrderWebHook(Properties pr, ArrayList<String> list, String strp,int st) {
+        String str="";
+        if (st == 1 && dialog.getSeparateOrderCheckBox().isSelected() == Boolean.TRUE){
+            for (int j = 0; j < 2; j++) {
+                if (j == 1) {
+                    pr.setProperty("TRANS_ID", String.valueOf(++ID));
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                for (int i = 0; i < list.size(); i++) {
+                    str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
+                }
+
+                try {
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                    writer.write(str + "\r\n");
+                    writer.flush();
+                    writer.close();
+                    text.setText("Продажа...");
+                    str = "";
+                } catch (IOException e1) {
+                    test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                    e1.printStackTrace();
+                }
+            }
+            text.setText("Режим WebHooks активирован...");
+        }
+    }
+
+    private void separateBuyOrderWebHook(Properties pr,ArrayList<String> list, String strp,int st) {
+        String str="";
+        if (st == -1 && dialog.getSeparateOrderCheckBox().isSelected() == Boolean.TRUE) {
+            for (int j = 0; j < 2; j++) {
+                if (j == 1) {
+                    pr.setProperty("TRANS_ID", String.valueOf(++ID));
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                for (int i = 0; i < list.size(); i++) {
+                    str += list.get(i) + "=" + pr.getProperty(list.get(i)) + "; ";
+                }
+                try {
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("trade.tri", append = true));
+                    writer.write(str + "\r\n");
+                    writer.flush();
+                    writer.close();
+                    text.setText("Покупка...");
+                    str = "";
+                } catch (IOException e1) {
+                    test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
+                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                    e1.printStackTrace();
+                }
+                text.setText("Режим WebHooks активирован...");
+            }
+        }
+    }
+
+    private DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
+        for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
+            if (entry.getValue().getName().getText().equals(nameTs)) {
+                return entry.getValue();
+            }
+
+        }
+        return null;
+    }
+
+    private void serializeBuy(ArrayList<String> buyList) {
+        try {
+            FileOutputStream fos =
+                    new FileOutputStream("buylist.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(buyList);
+            oos.close();
+            fos.close();
+        } catch (Exception e) {
+        }
+    }
+
+    private void serializeSell(ArrayList<String> sellList) {
+        try {
+            FileOutputStream fos =
+                    new FileOutputStream("selllist.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(sellList);
+            oos.close();
+            fos.close();
+        } catch (Exception e) {
+        }
+    }
+
+    private void serializeHold(ArrayList<String> holdList) {
+        try {
+            FileOutputStream fos =
+                    new FileOutputStream("holdlist.ser");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(holdList);
+            oos.close();
+            fos.close();
+        } catch (Exception e) {
+        }
+    }
+
+    private ArrayList<String>[] initOrderList() {
+        text.setText("Инициализация...");
+        ArrayList<String>[] list = new ArrayList[3];
+        String[] path = {
+                "buylist.ser",
+                "selllist.ser",
+                "holdlist.ser"
+        };
+        try {
+            for (int i = 0; i < path.length; i++) {
+                FileInputStream fis = new FileInputStream(path[i]);
+                if (fis.available() > 0) {
+                    ObjectInputStream ois = new ObjectInputStream(fis);
+                    list[i] = (ArrayList<String>) ois.readObject();
+                    ois.close();
+                }
+                fis.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if(list[0]==null) {
+            list[0] = new ArrayList<String>();
+        }
+        if (list[1] == null) {
+            list[1] = new ArrayList<String>();
+        }
+        if (list[2] == null) {
+            list[2] = new ArrayList<String>();
+        }
+
+        return list;
+    }
 }
+
+
+
+
+
