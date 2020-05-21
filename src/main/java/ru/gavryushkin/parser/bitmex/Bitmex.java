@@ -22,10 +22,12 @@ public class Bitmex {
 
     private static RestTemplate restTemplate = new RestTemplate();
     private static String ApiKey = null;
-    //private static String BASEPATH = "https://testnet.bitmex.com/api/v1";
-    private static String BASEPATH="https://www.bitmex.com/api/v1";
-//    private final static String ID = "v0_GfasE_fVwbOEX5_PtTiPC";
-//    private final static String KEY = "6Z87UN9hJK-2jFnp-mgBlnznBPmOfHz7kKxvCb7t87MmjcBj";
+    private static String BASEPATH = "https://testnet.bitmex.com/api/v1";
+    //private static String BASEPATH="https://www.bitmex.com/api/v1";
+    //private final static String ID = "v0_GfasE_fVwbOEX5_PtTiPC";
+    //private final static String KEY = "6Z87UN9hJK-2jFnp-mgBlnznBPmOfHz7kKxvCb7t87MmjcBj";
+    private static String[] pozition= {"0",""};
+
 
     public static int getUser(String id, String key) {
         String method = "GET";
@@ -71,10 +73,14 @@ public class Bitmex {
         if (responseEntity.getBody().length == 0) {
             System.out.println("Нет открытых позиций");
         }
-        String []pozition={
-                String.valueOf(responseEntity.getBody()[0].getCurrentQty()),
-                String.valueOf(responseEntity.getBody()[0].getPrevClosePrice())
-        };
+//        ResponseEntity<Object> resp2 = restTemplate.exchange(
+//                BASEPATH + "/position?symbol=XBTUSD&binSize=1m", HttpMethod.GET, entity, Object.class);
+        if (responseEntity.getBody().length!= 0) {
+             pozition[0]= String.valueOf(responseEntity.getBody()[0].getCurrentQty());
+             return pozition;
+        }
+        pozition[0]="0";
+        pozition[1]="";
         return pozition;
     }
 
@@ -99,6 +105,8 @@ public class Bitmex {
         ResponseEntity<Order> responseEntity = restTemplate.exchange(
                 BASEPATH + "/order", HttpMethod.POST, entity, Order.class);
         System.out.println(responseEntity.getStatusCode());
+        pozition[0]= String.valueOf(responseEntity.getBody().getOrderQty());
+        pozition[1]=String.valueOf(responseEntity.getBody().getPrice());
     }
 
     public synchronized static void createOrderSell(String id, String key, String quantity) {
@@ -122,6 +130,12 @@ public class Bitmex {
         ResponseEntity<Order> responseEntity = restTemplate.exchange(
                 BASEPATH + "/order", HttpMethod.POST, entity, Order.class);
         System.out.println(responseEntity.getStatusCode());
+        pozition[0]=String.valueOf(responseEntity.getBody().getOrderQty().negate());
+        pozition[1]=String.valueOf(responseEntity.getBody().getPrice());
+    }
+
+    public static String[] getPozition() {
+        return pozition;
     }
 }
 

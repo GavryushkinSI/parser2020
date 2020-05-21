@@ -52,6 +52,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -67,6 +69,9 @@ import java.util.Properties;
 import java.util.stream.Stream;
 
 public class ParserApplication {
+    String[] pozitionBitmex={"0","0"};
+    StringWriter wr=new StringWriter();
+    StringBuffer bf=new StringBuffer();
     static JFrame frame;
     JTabbedPane tabs;
     MyLabel screenLabel;
@@ -210,14 +215,14 @@ public class ParserApplication {
                     } else {
                         if (!(String.valueOf(dialog.cbFirst.getSelectedItem()).equals("STOCK "))) {
                             try {
-                                String[] pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                 pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
                                         dialog.keyField.getText());
                                 text.setText("BITMEX XBTUSD текущая позиция: "
-                                        + pozitionBitmex[0] + " цена " + pozitionBitmex[1]);
-                                Thread.sleep(45000);
+                                        + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
+                                Thread.sleep(60000);
                             } catch (Exception e) {
                                 try {
-                                    Thread.sleep(45000);
+                                    Thread.sleep(60000);
                                 } catch (Exception e1) {
                                 }
                                 text.setText("Ошибка получения текущей позиции Bitmex");
@@ -603,7 +608,6 @@ public class ParserApplication {
                 status_5 = 0;
                 text.setText("Работа остановлена, файлы tri,tro,trr очищены!");
                 text.setBackground(dark);
-                text.setText("Режим WebHooks запущен...");
             }
         });
         butscreen.addMouseListener(new ScreenLister());
@@ -622,7 +626,8 @@ public class ParserApplication {
                 "MIX",
                 "SBER",
                 "STOCK ",
-                "XBTUSD "};
+                "XBTUSD ",
+        ""};
         //*************************************************************************//
         buy = new JButton("Buy_1");
         sell = new JButton("Sell_1");
@@ -937,9 +942,7 @@ public class ParserApplication {
                 if (!dialog.cbFirst.getSelectedItem().equals("XBTUSD ")) {
                     text.setText("Скрин: " + count + " ID: " + ID + " Position" + ": " + size);
                 } else {
-                    text.setText("Скрин: " + count + " XBTUSD: " + Bitmex.getPozition(
-                            dialog.idField.getText(),
-                            dialog.keyField.getText()));
+                    text.setText("Скрин: " + count + " XBTUSD: "+"Позиция: " + pozitionBitmex[0] + " Цена сделки: " + pozitionBitmex[1]);
                 }
                 int[] pixels = copyFromBufferedImage(buf);
                 try {
@@ -2309,18 +2312,24 @@ public class ParserApplication {
                                 dialog.keyField.getText(),
                                 String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2));
                         size += Integer.parseInt(dialog.getQuantitytext()) * 2;
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     } else if (status == 0) {
                         Bitmex.createOrderBuy(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
                                 dialog.getQuantitytext());
                         size += Integer.parseInt(dialog.getQuantitytext());
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     }
                     text.setText("Покупка...");
                 } catch (Exception e) {
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    e.printStackTrace();
+                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
+                    e.printStackTrace(new PrintWriter(wr));
+                    write_log("BUY","orderlog.txt",wr.toString());
+                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2358,7 +2367,7 @@ public class ParserApplication {
                     text.setText("Продажа...");
                 } catch (IOException e1) {
                     test.sendSignal("ERROR", "Ошибка записи в файл транзакций " + new Date());
-                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
+                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка записи в файл транзакций");
                     e1.printStackTrace();
                 }
             } else {
@@ -2369,18 +2378,24 @@ public class ParserApplication {
                                 dialog.keyField.getText(),
                                 String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2));
                         size += Integer.parseInt(dialog.getQuantitytext()) * 2;
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     } else if (status == 0) {
                         Bitmex.createOrderSell(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
                                 dialog.getQuantitytext());
                         size += Integer.parseInt(dialog.getQuantitytext());
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     }
                     text.setText("Продажа...");
                 } catch (Exception e) {
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    e.printStackTrace();
+                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
+                    e.printStackTrace(new PrintWriter(wr));
+                    write_log("SELL","orderlog.txt",wr.toString());
+                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2429,18 +2444,25 @@ public class ParserApplication {
                                 dialog.keyField.getText(),
                                 dialog.getQuantitytext());
                         size -= Integer.parseInt(dialog.getQuantitytext());
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     } else if (status == -1) {
                         Bitmex.createOrderBuy(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
                                 dialog.getQuantitytext());
                         size += Integer.parseInt(dialog.getQuantitytext());
+                        pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                dialog.keyField.getText());
                     }
                     text.setText("Выход из позиции...");
                 } catch (Exception e) {
+                    StringWriter wr=new StringWriter();
+                    e.printStackTrace(new PrintWriter(wr));
+                    write_log("HOLD","orderlog.txt",wr.toString());
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    e.printStackTrace();
+                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
+                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2710,9 +2732,14 @@ public class ParserApplication {
                             "1");
                     //size += 1;
                     text.setText("Покупка");
+                    pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                            dialog.keyField.getText());
                 } catch (Exception e) {
-                    text.setText("Ошибка ручного вытсавления заявки на Bitmex");
+                    e.printStackTrace(new PrintWriter(wr));
+                    write_log("BUY_HAND","orderlog.txt",wr.toString());
+                    text.setText("Ошибка ручного выставления заявки на Bitmex");
                     e.printStackTrace();
+                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2769,7 +2796,12 @@ public class ParserApplication {
                             "1");
                     //size -= 1;
                     text.setText("Продажа");
+                    pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                            dialog.keyField.getText());
                 } catch (Exception e) {
+                    e.printStackTrace(new PrintWriter(wr));
+                    write_log("SELL_HAND","orderlog.txt",wr.toString());
+                    wr.getBuffer().setLength(0);
                     text.setText("Ошибка ручного выcтавления заявки на Bitmex");
                     e.printStackTrace();
                 }
@@ -3256,7 +3288,10 @@ public class ParserApplication {
                     test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
                 }
             }
-            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList);
+            customWebHooksModule.getMap().forEach((k,v)->bf.append(v.getName().getText()).append(":").append(v.getEq().getTotalResult()));
+            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList+" Result: "+
+                    bf.toString());
+            bf.delete(0, bf.length());
         }
 
         /**
@@ -3379,7 +3414,10 @@ public class ParserApplication {
                     test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
                 }
             }
-            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList);
+            customWebHooksModule.getMap().forEach((k,v)->bf.append(k).append(":").append(v.getEq().getTotalResult()));
+            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList+"||"+
+                    bf.toString());
+            bf.delete(0, bf.length());
         }
 
         private synchronized void buyWebHook(DesktopObject obj, OrderWebHook order, int status, Map<String, String> price) {
@@ -3664,6 +3702,20 @@ public class ParserApplication {
         }
 
         return list;
+    }
+
+    //Запись текста в файл
+    static void write_log(String text,String path, String content) {
+        BufferedWriter wr = null;
+        try {
+            wr = new BufferedWriter(new FileWriter(path, true));
+            wr.write(text+":"+new Date() + " " + content);
+            wr.write("\n");
+            wr.flush();
+            wr.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
 

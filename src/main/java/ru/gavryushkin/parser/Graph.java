@@ -43,6 +43,13 @@ public class Graph implements Serializable {
         return total;
     }
 
+    public String getTotalResult(){
+        int x;
+        ArrayList<Integer>  total=getTotal();
+        x = total.stream().mapToInt(i -> i).sum();
+        return String.valueOf(x);
+    }
+
     @Override
     public String toString() {
         return "Graph{" +
