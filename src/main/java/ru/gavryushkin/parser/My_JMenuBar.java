@@ -25,31 +25,35 @@ import java.util.Map.Entry;
 public class My_JMenuBar extends JMenuBar {
     private CustomWebHooksModule customWebHooksModule;
     private WebHooksModule webHooksModule;
+    private ParserApplication.Test test;
     private static String HOST = "";
-    String[] items = new String[]{"Menu", "Clear Equity", "?Help", "GetUrl", "Custom WebHooks", "Skip Set WebHooks"};
+    String[] items = new String[]{"Menu", "Clear Equity", "?Help", "GetUrl", "Custom WebHooks", "Skip Set WebHooks", "Send Log"};
     JMenu menu;
     JMenuItem item_1;
     JMenuItem item_2;
     JMenuItem item_3;
     JMenuItem item_4;
     JMenuItem item_5;
+    JMenuItem item_6;
     static Checkbox check = new Checkbox("Set Validation");
 
     public static boolean getCheck() {
         return check.getState();
     }
 
-    public My_JMenuBar(CustomWebHooksModule customWebHooksModule, WebHooksModule webHooksModule) {
+    public My_JMenuBar(CustomWebHooksModule customWebHooksModule, WebHooksModule webHooksModule, ParserApplication.Test test) {
         this.menu = new JMenu(this.items[0]);
         this.item_1 = new JMenuItem(this.items[1]);
         this.item_2 = new JMenuItem(this.items[2]);
         this.item_3 = new JMenuItem(this.items[3]);
         this.item_4 = new JMenuItem(this.items[4]);
         this.item_5 = new JMenuItem(this.items[5]);
+        this.item_6 = new JMenuItem(this.items[6]);
         this.add(this.create_menu());
         check.setState(true);
         this.customWebHooksModule = customWebHooksModule;
         this.webHooksModule = webHooksModule;
+        this.test = test;
     }
 
     public JMenu create_menu() {
@@ -81,7 +85,7 @@ public class My_JMenuBar extends JMenuBar {
             public void actionPerformed(ActionEvent e) {
                 StringSelection stringSelection = new StringSelection("http://" + My_JMenuBar.this.getHost() + "/webHook");
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(stringSelection, (ClipboardOwner)null);
+                clipboard.setContents(stringSelection, (ClipboardOwner) null);
             }
         });
         this.item_4.addActionListener(new ActionListener() {
@@ -93,7 +97,7 @@ public class My_JMenuBar extends JMenuBar {
         this.item_5.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 Object[] options = new Object[]{"Да", "Нет"};
-                int n = JOptionPane.showOptionDialog(My_JMenuBar.this.item_5, "Данная операция сбросит все настройки вебхуков?", "Message", 0, 3, (Icon)null, options, options[0]);
+                int n = JOptionPane.showOptionDialog(My_JMenuBar.this.item_5, "Данная операция сбросит все настройки вебхуков?", "Message", 0, 3, (Icon) null, options, options[0]);
                 if (n == 0) {
                     System.out.println("Сброс настроек WebHook");
                     My_JMenuBar.this.write_file("buylist.ser", "");
@@ -108,8 +112,8 @@ public class My_JMenuBar extends JMenuBar {
                     My_JMenuBar.this.webHooksModule.getHoldList().clear();
                     Iterator entries = My_JMenuBar.this.customWebHooksModule.getMap().entrySet().iterator();
 
-                    while(entries.hasNext()) {
-                        DesktopObject object = (DesktopObject)((Entry)entries.next()).getValue();
+                    while (entries.hasNext()) {
+                        DesktopObject object = (DesktopObject) ((Entry) entries.next()).getValue();
                         object.setEq(new Graph());
                         HashMap<Integer, DesktopObject> m = My_JMenuBar.this.customWebHooksModule.getMap();
                         m.put(object.getIdObject(), object);
@@ -119,11 +123,20 @@ public class My_JMenuBar extends JMenuBar {
 
             }
         });
+        item_6.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(new JDialog(), "Логи отправлены");
+                test.sendSignalWithAttach("Логи от", "", "server-log.txt");
+                test.sendSignalWithAttach("Логи от", "", "orderlog.txt");
+            }
+        });
         this.menu.add(this.item_1);
         this.menu.add(this.item_2);
         this.menu.add(this.item_3);
         this.menu.add(this.item_4);
         this.menu.add(this.item_5);
+        this.menu.add(this.item_6);
         this.menu.setIcon(new ImageIcon("/Users/bootcamp/Desktop/Different/parser/src/main/java/ru/gavryushkin/parser/icon/icons8-меню-20.png"));
         return this.menu;
     }

@@ -234,7 +234,7 @@ public class TestClass {
     private String getPozBitmex() {
         String[] pozitionBitmex = Bitmex.getPozition(
                 app.dialog.getIdField().getText(),
-                app.dialog.getKeyField().getText());
+                app.dialog.getKeyField().getText(),"https://testnet.bitmex.com/api/v1");
         return pozitionBitmex[0];
     }
 

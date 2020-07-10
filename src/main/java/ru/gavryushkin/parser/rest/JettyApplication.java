@@ -1,12 +1,16 @@
 package ru.gavryushkin.parser.rest;
 
 
+import com.google.common.base.Throwables;
 import com.google.gson.Gson;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import ru.gavryushkin.parser.CustomWebHooksModule;
+import ru.gavryushkin.parser.DesktopObject;
 import ru.gavryushkin.parser.LineChart1;
 import ru.gavryushkin.parser.ParserApplication;
+import ru.gavryushkin.parser.logger.Logger;
 import ru.gavryushkin.parser.model.Equity;
 import ru.gavryushkin.parser.model.OrderWebHook;
 
@@ -24,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -33,13 +38,16 @@ public class JettyApplication {
     private static ParserApplication.Trade trade;
     private static ParserApplication.Dialog dialog;
     private static ParserApplication.WebHooksModule webHooksModule;
+    private static CustomWebHooksModule customWebHooksModule;
     static ServletContextHandler context;
     static String HOST = "";
+    static Map<Date,Integer> countRequest=new HashMap<>();
 
-    public JettyApplication(ParserApplication.Trade trade, ParserApplication.Dialog dialog, ParserApplication.WebHooksModule webHooksModule) {
+    public JettyApplication(ParserApplication.Trade trade, ParserApplication.Dialog dialog, ParserApplication.WebHooksModule webHooksModule, CustomWebHooksModule customWebHooksModule) {
         this.trade = trade;
         this.dialog = dialog;
         this.webHooksModule = webHooksModule;
+        this.customWebHooksModule = customWebHooksModule;
     }
 
     public void startServerJetty() {
@@ -56,6 +64,7 @@ public class JettyApplication {
         context.addServlet(SellServlet.class, "/sell");
         context.addServlet(GetGraph.class, "/getGraph");
         context.addServlet(ActivateAuto.class, "/activateAuto");
+        context.addServlet(GetStatServlet.class, "/getStat");
         server.setHandler(context);
         try {
             server.start();
@@ -79,6 +88,8 @@ public class JettyApplication {
         @Override
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             response.setStatus(HttpServletResponse.SC_OK);
+//            Date currentMinute= DateTimeUtils.toGregorianCalendar()
+//            countRequest.put()
             Scanner s = new Scanner(request.getInputStream());
             String data = "";
             while (s.hasNext()) {
@@ -86,14 +97,18 @@ public class JettyApplication {
             }
             s.close();
             write_file("server-log.txt", data);
-            Map map = new Gson().fromJson(data, Map.class);
-            orderSide = (String) map.get("orderSide");
-            if (orderSide.equals("Buy")) {
-                trade.sendSignalWebHook(1);
-            } else if (orderSide.equals("Sell")) {
-                trade.sendSignalWebHook(-1);
-            } else if (orderSide.equals("Hold")) {
-                trade.sendSignalWebHook(0);
+            try {
+                Map map = new Gson().fromJson(data, Map.class);
+                orderSide = (String) map.get("orderSide");
+                if (orderSide.equals("Buy")) {
+                    trade.sendSignalWebHook(1);
+                } else if (orderSide.equals("Sell")) {
+                    trade.sendSignalWebHook(-1);
+                } else if (orderSide.equals("Hold")) {
+                    trade.sendSignalWebHook(0);
+                }
+            }catch (Exception e){
+                Logger.write_log("WEBHOOK_REQUEST","orderlog.txt", Throwables.getStackTraceAsString(e));
             }
         }
     }
@@ -132,6 +147,9 @@ public class JettyApplication {
                         "</form>");
                 resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
                         "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">SELL</button>\n" +
+                        "</form>");
+                resp.getWriter().println("<form action=\"/getStat\"\"/example/\">\n" +
+                        "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">STAT</button>\n" +
                         "</form>");
                 resp.getWriter().println("<div id=\"chartContainer\" style=\"height: 300px; width: 700px;border: solid 2px #010522;\"></div>\n" +
                         "\n" +
@@ -240,6 +258,17 @@ public class JettyApplication {
     }
 
     //Сервлет покупки
+    public static class GetStatServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            resp.setStatus(HttpServletResponse.SC_OK);
+            Map<Integer, DesktopObject> map=customWebHooksModule.getMap();
+            req.getRequestDispatcher("/remote").forward(req, resp);
+        }
+    }
+
+
+    //Сервлет покупки
     public static class BuyServlet extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -325,19 +354,23 @@ public class JettyApplication {
             }
             s.close();
             write_file("server-log.txt", data);
-            OrderWebHook orderWebHook=null;
             try {
-                orderWebHook = new Gson().fromJson(data, OrderWebHook.class);
+                OrderWebHook orderWebHook = null;
+                try {
+                    orderWebHook = new Gson().fromJson(data, OrderWebHook.class);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                orderSide = orderWebHook.getOperation();
+                if (orderSide.equals("buy")) {
+                    webHooksModule.sendSignalWebHook(1, orderWebHook);
+                } else if (orderSide.equals("sell")) {
+                    webHooksModule.sendSignalWebHook(-1, orderWebHook);
+                } else if (orderSide.equals("hold")) {
+                    webHooksModule.sendSignalWebHook(0, orderWebHook);
+                }
             }catch (Exception e){
-                e.printStackTrace();
-            }
-            orderSide = orderWebHook.getOperation();
-            if (orderSide.equals("buy")) {
-                webHooksModule.sendSignalWebHook(1, orderWebHook);
-            } else if (orderSide.equals("sell")) {
-                webHooksModule.sendSignalWebHook(-1, orderWebHook);
-            } else if (orderSide.equals("hold")) {
-                webHooksModule.sendSignalWebHook(0, orderWebHook);
+                Logger.write_log("CUSTOMWEBHOOK_REQUEST","orderlog.txt",Throwables.getStackTraceAsString(e));
             }
         }
     }

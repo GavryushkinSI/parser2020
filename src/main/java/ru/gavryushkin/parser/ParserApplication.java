@@ -1,10 +1,12 @@
 package ru.gavryushkin.parser;
 
+import com.google.common.base.Throwables;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.gavryushkin.parser.bitmex.Bitmex;
+import ru.gavryushkin.parser.logger.Logger;
 import ru.gavryushkin.parser.model.OrderWebHook;
 import ru.gavryushkin.parser.rest.JettyApplication;
 import ru.gavryushkin.parser.subscriber.Authorization;
@@ -52,7 +54,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -69,9 +70,9 @@ import java.util.Properties;
 import java.util.stream.Stream;
 
 public class ParserApplication {
-    String[] pozitionBitmex={"0","0"};
-    StringWriter wr=new StringWriter();
-    StringBuffer bf=new StringBuffer();
+    String[] pozitionBitmex = {"0", "0"};
+    StringWriter wr = new StringWriter();
+    StringBuffer bf = new StringBuffer();
     static JFrame frame;
     JTabbedPane tabs;
     MyLabel screenLabel;
@@ -119,14 +120,15 @@ public class ParserApplication {
     static boolean token;
     static Map<String, String> map;
     static Map<String, String> infoPrice;
-    Color dark=new Color(2, 2, 2, 179);
-    Color col1=new Color(52, 105, 184);;
-    Color blueDark=new Color(34,69,112);
-    Color darkLight=new Color(53,58,58, 186);
-    Color green=new Color(24,143,57);
-    Color red=new Color(202,52,59);
-    Color blueLight=new Color(24,117,116);
-    static boolean STATE=false;
+    Color dark = new Color(2, 2, 2, 179);
+    Color col1 = new Color(52, 105, 184);
+    ;
+    Color blueDark = new Color(34, 69, 112);
+    Color darkLight = new Color(53, 58, 58, 186);
+    Color green = new Color(24, 143, 57);
+    Color red = new Color(202, 52, 59);
+    Color blueLight = new Color(24, 117, 116);
+    static boolean STATE = false;
 
     //Парсинг цены с сайта Finam
     public void getPrice() {
@@ -215,8 +217,8 @@ public class ParserApplication {
                     } else {
                         if (!(String.valueOf(dialog.cbFirst.getSelectedItem()).equals("STOCK "))) {
                             try {
-                                 pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                        dialog.keyField.getText());
+                                pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
+                                        dialog.keyField.getText(), dialog.getUrlBtn().getText());
                                 text.setText("BITMEX XBTUSD текущая позиция: "
                                         + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                                 Thread.sleep(60000);
@@ -373,7 +375,8 @@ public class ParserApplication {
                             "6Z87UN9hJK-2jFnp-mgBlnznBPmOfHz7kKxvCb7t87MmjcBj\n" +
                             "false\n" +
                             "false\n" +
-                            "false");
+                            "false\n" +
+                            "https://www.bitmex.com/api/v1");
                     writer.flush();
                     writer.close();
                 } catch (IOException e1) {
@@ -456,19 +459,6 @@ public class ParserApplication {
             e.printStackTrace();
         }
         dialog = new Dialog(frame, "Settings");
-        customWebHooksModule = new CustomWebHooksModule(dialog);
-        try {
-            customWebHooksModule.init();
-//            customWebHooksModule.getFrame().setVisible(false);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedLookAndFeelException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
         ImageIcon icon_2 = new ImageIcon("image_set.png");
         dialog.setIconImage(icon_2.getImage());
         /**Инициализация почтового модуля
@@ -478,59 +468,11 @@ public class ParserApplication {
         test.save();
         /*---------------------------------------------------------
          */
-        frame = new JFrame("Parse_Signal_v.3.0 at 05.02.2020");
+        frame = new JFrame("Parse_Signal WEBHOOKS v.3.1");
         ImageIcon icon = new ImageIcon("image.png");
         frame.setIconImage(icon.getImage());
         frame.setBounds(1000, 2, 350, 430);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        //****Подтверждение закрытия окна**//////////////////
-        frame.addWindowListener(new WindowListener() {
-            @Override
-            public void windowOpened(WindowEvent e) {
-
-            }
-
-            public void windowClosing(WindowEvent event) {
-                Object[] options = {"Да","Нет"};
-                int n = JOptionPane
-                        .showOptionDialog(event.getWindow(), "Выйти из программы?",
-                                "Message", JOptionPane.YES_NO_OPTION,
-                                JOptionPane.QUESTION_MESSAGE, null, options,
-                                options[0]);
-                if (n == 0) {
-                    dialog.save();
-                    event.getWindow().setVisible(false);
-                    System.exit(0);
-                }
-                customWebHooksModule.save(customWebHooksModule.getMap());
-            }
-
-            @Override
-            public void windowClosed(WindowEvent e) {
-
-            }
-
-            @Override
-            public void windowIconified(WindowEvent e) {
-
-            }
-
-            @Override
-            public void windowDeiconified(WindowEvent e) {
-
-            }
-
-            @Override
-            public void windowActivated(WindowEvent e) {
-
-            }
-
-            @Override
-            public void windowDeactivated(WindowEvent e) {
-
-            }
-        });
-        //****Подтверждение закрытия окна**//////////////////
         //Меню бара
         //frame.getContentPane().setBackground(new Color(2, 2, 2, 201));
         frame.getContentPane().setLayout(new BorderLayout());
@@ -627,7 +569,7 @@ public class ParserApplication {
                 "SBER",
                 "STOCK ",
                 "XBTUSD ",
-        ""};
+                ""};
         //*************************************************************************//
         buy = new JButton("Buy_1");
         sell = new JButton("Sell_1");
@@ -649,12 +591,73 @@ public class ParserApplication {
         instrument.setForeground(Color.BLUE);
         trade2 = new JButton(new ImageIcon("icon/icons8-bottom-19.png"));
         trade3 = new JButton("  H  ");
-        equity = new JButton("EQ",new ImageIcon("icon/icons8-eq-15.png"));
+        equity = new JButton("EQ", new ImageIcon("icon/icons8-eq-15.png"));
         //martin=new JButton("MaRtiN...");
         def_cor = new Checkbox();
         tr = new Trade();
         wb = new WebHooksModule();
-        My_JMenuBar menu = new My_JMenuBar(customWebHooksModule,wb);
+        customWebHooksModule = new CustomWebHooksModule(dialog, wb);
+        try {
+            customWebHooksModule.init();
+//            customWebHooksModule.getFrame().setVisible(false);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        //****Подтверждение закрытия окна**//////////////////
+        frame.addWindowListener(new WindowListener() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+
+            }
+
+            public void windowClosing(WindowEvent event) {
+                Object[] options = {"Да", "Нет"};
+                int n = JOptionPane
+                        .showOptionDialog(event.getWindow(), "Выйти из программы?",
+                                "Message", JOptionPane.YES_NO_OPTION,
+                                JOptionPane.QUESTION_MESSAGE, null, options,
+                                options[0]);
+                if (n == 0) {
+                    dialog.save();
+                    event.getWindow().setVisible(false);
+                    System.exit(0);
+                }
+                customWebHooksModule.save(customWebHooksModule.getMap());
+            }
+
+            @Override
+            public void windowClosed(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowIconified(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowDeiconified(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowActivated(WindowEvent e) {
+
+            }
+
+            @Override
+            public void windowDeactivated(WindowEvent e) {
+
+            }
+        });
+        //****Подтверждение закрытия окна**//////////////////
+        My_JMenuBar menu = new My_JMenuBar(customWebHooksModule, wb, test);
         frame.setJMenuBar(menu);
 //        Cоздание диалогового окна
         option.addMouseListener(new MouseAdapter() {
@@ -705,8 +708,8 @@ public class ParserApplication {
 //            panel.add(cond_2);
 
         panel.add(option);
-         panel.setBackground(dark);
-         text.setBackground(dark);
+        panel.setBackground(dark);
+        text.setBackground(dark);
         text.setForeground(Color.white);
         //panel.add(info);
         //panel.add(instrument);
@@ -747,7 +750,7 @@ public class ParserApplication {
                 tr.Order_B();
                 //status=1;
                 //size=size+Integer.parseInt(dialog.getQuantitytext());
-                text.setText("Покупка");
+                //text.setText("Покупка");
                 //text.setText("Лотов в сделке: " + size);
             }
         });
@@ -757,7 +760,7 @@ public class ParserApplication {
             @Override
             public void mouseClicked(MouseEvent e) {
                 tr.Order_S();
-                text.setText("Продажа");
+                //text.setText("Продажа");
                 //text.setText("Лотов в сделке: " + size);
 
             }
@@ -777,7 +780,7 @@ public class ParserApplication {
             public void mouseClicked(MouseEvent e) {
                 try {
                     equity.setText(String.valueOf(read_file("data.txt")));
-                    new LineChart1("Equity",null).create_graphics("Equity",null);
+                    new LineChart1("Equity", null).create_graphics("Equity", null);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     equity.setText("0");
@@ -942,7 +945,7 @@ public class ParserApplication {
                 if (!dialog.cbFirst.getSelectedItem().equals("XBTUSD ")) {
                     text.setText("Скрин: " + count + " ID: " + ID + " Position" + ": " + size);
                 } else {
-                    text.setText("Скрин: " + count + " XBTUSD: "+"Позиция: " + pozitionBitmex[0] + " Цена сделки: " + pozitionBitmex[1]);
+                    text.setText("Скрин: " + count + " XBTUSD: " + "Позиция: " + pozitionBitmex[0] + " Цена сделки: " + pozitionBitmex[1]);
                 }
                 int[] pixels = copyFromBufferedImage(buf);
                 try {
@@ -958,11 +961,11 @@ public class ParserApplication {
             }
             //Инициализация режима WebHooks
             if (work != false && dialog.webHooksMode.isSelected() == true && token != false && JettyApplication.getStatusServer() != true) {
-                STATE=true;
+                STATE = true;
                 screenLabel.setIcon(new ImageIcon("icon/hook.png"));
                 text.setText("Режим WebHooks запущен...");
                 try {
-                    jettyApplication = new JettyApplication(tr, dialog, wb);
+                    jettyApplication = new JettyApplication(tr, dialog, wb, customWebHooksModule);
                     jettyApplication.startServerJetty();
                 } catch (Exception e) {
                 }
@@ -970,7 +973,7 @@ public class ParserApplication {
             }
         }
 
-        private void searchpixel(int[] pixels) {
+        private synchronized void searchpixel(int[] pixels) {
             //list_1.forEach(System.out::println);
             //Режим мартингейла************************************Модуль MaRtiN*****************************//
 //            if(dialog_2.mart.getState()==true){
@@ -1411,6 +1414,8 @@ public class ParserApplication {
         private JCheckBox webHooksMode;
         private JLabel remoteAccessLabel;
         private JCheckBox remoteAccessCheck;
+        private JLabel urlLabel;
+        private JButton urlBtn;
 
         public Dialog(Frame owner, String title) {
             super(owner, title);
@@ -1514,6 +1519,21 @@ public class ParserApplication {
             webHooksModeLabel = new JLabel(" Включить режим WebHooks");
             remoteAccessLabel = new JLabel(" Удаленный доступ");
             remoteAccessCheck = new JCheckBox();
+            urlLabel = new JLabel(" URL BITMEX");
+            urlBtn = new JButton("https://testnet.bitmex.com/api/v1");
+            urlBtn.setForeground(Color.WHITE);
+            urlBtn.setBackground(dark);
+            urlBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            urlBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (urlBtn.getText().equals("https://testnet.bitmex.com/api/v1")) {
+                        urlBtn.setText("https://www.bitmex.com/api/v1");
+                    } else {
+                        urlBtn.setText("https://testnet.bitmex.com/api/v1");
+                    }
+                }
+            });
             fill_mapdelta();
             loadoption();
         }
@@ -1597,6 +1617,7 @@ public class ParserApplication {
                     separateOrderCheckBox.setSelected(Boolean.parseBoolean(reader.readLine()));
                     webHooksMode.setSelected(Boolean.parseBoolean(reader.readLine()));
                     remoteAccessCheck.setSelected(Boolean.parseBoolean(reader.readLine()));
+                    urlBtn.setText(reader.readLine());
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -1673,7 +1694,8 @@ public class ParserApplication {
                                 keyField.getText() + "\n" +
                                 separateOrderCheckBox.isSelected() + "\n" +
                                 webHooksMode.isSelected() + "\n" +
-                                remoteAccessCheck.isSelected() + "\n");
+                                remoteAccessCheck.isSelected() + "\n" +
+                                urlBtn.getText() + "\n");
                 writer.flush();
                 writer.close();
             } catch (IOException e1) {
@@ -1683,7 +1705,7 @@ public class ParserApplication {
 
         void create() {
             setBounds(1000, 10, 350, 670);
-            setLayout(new GridLayout(22, 2));
+            setLayout(new GridLayout(24, 2));
             //getContentPane().setBackground(new Color(184, 210, 206));
             getContentPane().add(tokenLabel);
             getContentPane().add(tokenField);
@@ -1743,12 +1765,14 @@ public class ParserApplication {
             getContentPane().add(remoteAccessCheck);
             getContentPane().add(testBitmexLabel);
             getContentPane().add(testBitmexButton);
+            getContentPane().add(urlLabel);
+            getContentPane().add(urlBtn);
             testBitmexButton.addMouseListener(new MouseAdapter() {
 
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     try {
-                        if (Bitmex.getUser(idField.getText(), keyField.getText()) == 200) {
+                        if (Bitmex.getUser(idField.getText(), keyField.getText(), dialog.getUrlBtn().getText()) == 200) {
                             testBitmexButton.setBackground(green);
                             text.setText("Удачное подключение к Bitmex");
                         }
@@ -1825,7 +1849,8 @@ public class ParserApplication {
                                         keyField.getText() + "\n" +
                                         separateOrderCheckBox.isSelected() + "\n" +
                                         webHooksMode.isSelected() + "\n" +
-                                        remoteAccessCheck.isSelected() + "\n");
+                                        remoteAccessCheck.isSelected() + "\n" +
+                                        urlBtn.getText() + "\n");
                         writer.flush();
                         writer.close();
                         setVisible(false);
@@ -2063,6 +2088,14 @@ public class ParserApplication {
         public void setRemoteAccessCheck(JCheckBox remoteAccessCheck) {
             this.remoteAccessCheck = remoteAccessCheck;
         }
+
+        public JButton getUrlBtn() {
+            return urlBtn;
+        }
+
+        public void setUrlBtn(JButton urlBtn) {
+            this.urlBtn = urlBtn;
+        }
     }
 
     //-------------------------------------------------------------------------------------------------------------------------------
@@ -2153,7 +2186,6 @@ public class ParserApplication {
             return mbp;
         }
 
-
         public boolean sendMessage(final String content) {
             boolean result = false;
             try {
@@ -2187,6 +2219,29 @@ public class ParserApplication {
             }
             return result;
         }
+
+        public boolean sendMessageWithAttach(final String content, final String filePath) {
+            boolean result = false;
+            try {
+                // Содержимое сообщения
+                Multipart mmp = new MimeMultipart();
+                // Текст сообщения
+                MimeBodyPart bodyPart = new MimeBodyPart();
+                bodyPart.setContent(content, "text/plain; charset=utf-8");
+                mmp.addBodyPart(bodyPart);
+                MimeBodyPart mbr = createFileAttachment(filePath);
+                mmp.addBodyPart(mbr);
+                message.setContent(mmp);
+                // Отправка сообщения
+                Transport.send(message);
+                result = true;
+            } catch (MessagingException e) {
+                System.out.println("Ошибка отправки сообщения");
+                System.err.println(e.getMessage());
+                JOptionPane.showMessageDialog(frame, e.getMessage());
+            }
+            return result;
+        }
 //----------------------------------------------------------------------------------------------------------------------------------
 
         /**
@@ -2207,6 +2262,22 @@ public class ParserApplication {
 
             SendEmail(emailTo, thema);
             sendMessage(text);
+            System.out.println("Сообщение отправлено " + EMAIL_FROM);
+        }
+
+        synchronized void sendSignalWithAttach(String thema, String text, String filePath) {
+            SMTP_SERVER = "smtp.yandex.ru";
+            SMTP_Port = "465";
+            EMAIL_FROM = "parsesignal@yandex.ru";
+            SMTP_AUTH_USER = "parsesignal";
+            SMTP_AUTH_PWD = "aspeka25y";
+            REPLY_TO = "parsesignal@yandex.ru";
+
+
+            String emailTo = "parsesignal@yandex.ru";
+
+            SendEmail(emailTo, thema + " " + dialog.getMail());
+            sendMessageWithAttach(text, filePath);
             System.out.println("Сообщение отправлено " + EMAIL_FROM);
         }
     }
@@ -2310,26 +2381,27 @@ public class ParserApplication {
                         Bitmex.createOrderBuy(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2));
+                                String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2),
+                                dialog.getUrlBtn().getText());
                         size += Integer.parseInt(dialog.getQuantitytext()) * 2;
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     } else if (status == 0) {
                         Bitmex.createOrderBuy(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                dialog.getQuantitytext());
+                                dialog.getQuantitytext(),
+                                dialog.getUrlBtn().getText());
                         size += Integer.parseInt(dialog.getQuantitytext());
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     }
                     text.setText("Покупка...");
+                    text.setText("BITMEX XBTUSD текущая позиция: "
+                            + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                 } catch (Exception e) {
+                    Logger.write_log("BUY", "orderlog.txt", Throwables.getStackTraceAsString(e));
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    e.printStackTrace(new PrintWriter(wr));
-                    write_log("BUY","orderlog.txt",wr.toString());
-                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2376,26 +2448,27 @@ public class ParserApplication {
                         Bitmex.createOrderSell(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2));
+                                String.valueOf(Integer.parseInt(dialog.getQuantitytext()) * 2),
+                                dialog.getUrlBtn().getText());
                         size += Integer.parseInt(dialog.getQuantitytext()) * 2;
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     } else if (status == 0) {
                         Bitmex.createOrderSell(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                dialog.getQuantitytext());
+                                dialog.getQuantitytext(),
+                                dialog.getUrlBtn().getText());
                         size += Integer.parseInt(dialog.getQuantitytext());
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     }
                     text.setText("Продажа...");
+                    text.setText("BITMEX XBTUSD текущая позиция: "
+                            + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                 } catch (Exception e) {
+                    Logger.write_log("SELL", "orderlog.txt", Throwables.getStackTraceAsString(e));
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    e.printStackTrace(new PrintWriter(wr));
-                    write_log("SELL","orderlog.txt",wr.toString());
-                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2442,27 +2515,27 @@ public class ParserApplication {
                         Bitmex.createOrderSell(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                dialog.getQuantitytext());
+                                dialog.getQuantitytext(),
+                                dialog.getUrlBtn().getText());
                         size -= Integer.parseInt(dialog.getQuantitytext());
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     } else if (status == -1) {
                         Bitmex.createOrderBuy(
                                 dialog.idField.getText(),
                                 dialog.keyField.getText(),
-                                dialog.getQuantitytext());
+                                dialog.getQuantitytext(),
+                                dialog.getUrlBtn().getText());
                         size += Integer.parseInt(dialog.getQuantitytext());
                         pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                                dialog.keyField.getText());
+                                dialog.keyField.getText(), dialog.getUrlBtn().getText());
                     }
                     text.setText("Выход из позиции...");
+                    text.setText("BITMEX XBTUSD текущая позиция: "
+                            + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                 } catch (Exception e) {
-                    StringWriter wr=new StringWriter();
-                    e.printStackTrace(new PrintWriter(wr));
-                    write_log("HOLD","orderlog.txt",wr.toString());
+                    Logger.write_log("HOLD", "orderlog.txt", Throwables.getStackTraceAsString(e));
                     text.setText("Ошибка отправки заявки на Bitmex");
-                    //JOptionPane.showMessageDialog(new JFrame("Message"), "Ошибка отправки заявки на Bitmex");
-                    wr.getBuffer().setLength(0);
                 }
             }
         }
@@ -2682,7 +2755,7 @@ public class ParserApplication {
         }
 
         //**********************Простые ордера на покупку и продажу*********************
-        public void Order_B() {
+        public synchronized void Order_B() {
             if (!dialog.cbFirst.getSelectedItem().equals("XBTUSD ")) {
                 if (dialog.cbFirst.getSelectedItem().equals("STOCK ")) {
                     code = "TQBR";
@@ -2729,23 +2802,23 @@ public class ParserApplication {
                     Bitmex.createOrderBuy(
                             dialog.idField.getText(),
                             dialog.keyField.getText(),
-                            "1");
+                            "1",
+                            dialog.getUrlBtn().getText());
                     //size += 1;
                     text.setText("Покупка");
                     pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                            dialog.keyField.getText());
+                            dialog.keyField.getText(), dialog.getUrlBtn().getText());
+                    text.setText("BITMEX XBTUSD текущая позиция: "
+                            + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                 } catch (Exception e) {
-                    e.printStackTrace(new PrintWriter(wr));
-                    write_log("BUY_HAND","orderlog.txt",wr.toString());
+                    Logger.write_log("BUY_HAND", "orderlog.txt", Throwables.getStackTraceAsString(e));
                     text.setText("Ошибка ручного выставления заявки на Bitmex");
-                    e.printStackTrace();
-                    wr.getBuffer().setLength(0);
                 }
             }
         }
 
 
-        public void Order_S() {
+        public synchronized void Order_S() {
             if (!dialog.cbFirst.getSelectedItem().equals("XBTUSD ")) {
                 if (dialog.cbFirst.getSelectedItem().equals("STOCK ")) {
                     code = "TQBR";
@@ -2793,17 +2866,17 @@ public class ParserApplication {
                     Bitmex.createOrderSell(
                             dialog.idField.getText(),
                             dialog.keyField.getText(),
-                            "1");
+                            "1",
+                            dialog.getUrlBtn().getText());
                     //size -= 1;
                     text.setText("Продажа");
                     pozitionBitmex = Bitmex.getPozition(dialog.idField.getText(),
-                            dialog.keyField.getText());
+                            dialog.keyField.getText(), dialog.getUrlBtn().getText());
+                    text.setText("BITMEX XBTUSD текущая позиция: "
+                            + pozitionBitmex[0] + " цена сделки: " + pozitionBitmex[1]);
                 } catch (Exception e) {
-                    e.printStackTrace(new PrintWriter(wr));
-                    write_log("SELL_HAND","orderlog.txt",wr.toString());
-                    wr.getBuffer().setLength(0);
+                    Logger.write_log("SELL_HAND", "orderlog.txt", Throwables.getStackTraceAsString(e));
                     text.setText("Ошибка ручного выcтавления заявки на Bitmex");
-                    e.printStackTrace();
                 }
             }
         }
@@ -3041,9 +3114,9 @@ public class ParserApplication {
         if (token == false) {
             text.setText("Активируйте подписку (введите TOKEN в настройках)");
         }
-        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false && STATE!=true) {
+        if (dialog.getRemoteAccessCheck().isSelected() == true && token != false && STATE != true) {
             try {
-                JettyApplication jettyApplication = new JettyApplication(tr, dialog, wb);
+                JettyApplication jettyApplication = new JettyApplication(tr, dialog, wb, customWebHooksModule);
                 text.setText("Удалённый доступ запущен.Ещё раз нажмите кнопку START.");
                 jettyApplication.startServerJetty();
             } catch (Exception e) {
@@ -3159,11 +3232,11 @@ public class ParserApplication {
         }
 
         public synchronized void sendSignalWebHook(int position, OrderWebHook order) {
-            ArrayList<Integer> mapEq=null;
+            ArrayList<Integer> mapEq = null;
             Map<String, String> mapPrice = customWebHooksModule.getPriceFromQuik();
 //            mapPrice.put("SI", String.valueOf(60000+new Random().nextInt(2500)));
 //            mapPrice.put("BR", String.valueOf(15+new Random().nextInt(5)));
-            mapPrice.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
+            //mapPrice.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
             DesktopObject obj = getDetails(order.getNameTs(), customWebHooksModule.getMap());
             if (position == 1 && buyList.contains(obj.getName().getText()) != true) {
                 if (obj.getTarget().getLabel()
@@ -3171,35 +3244,44 @@ public class ParserApplication {
                         .equals("Quik")) {
                     if (sellList.contains(obj.getName().getText()) == true) {
                         status = -1;
-                        if(obj.getjCheckBox().isSelected()) {
-                            buyWebHook(obj, order, status, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                buyWebHook(obj, order, status, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
+                            obj.getEq().setB(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openBuyOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
-                        obj.getEq().setB(mapEq);
                         buyList.add(obj.getName().getText());
                         sellList.remove(obj.getName().getText());
                     } else {
                         status = 0;
-                        if(obj.getjCheckBox().isSelected()) {
-                            buyWebHook(obj, order, status, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                buyWebHook(obj, order, status, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
+                            obj.getEq().setB(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openBuyOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
-                        obj.getEq().setB(mapEq);
                         buyList.add(obj.getName().getText());
                     }
                     holdList.remove(obj.getName().getText());
                     serializeBuy(buyList);
                     serializeSell(sellList);
                     serializeHold(holdList);
-                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                    s.put(obj.getIdObject(),obj);
+                    HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(), obj);
                     customWebHooksModule.save(s);
                 }
+
                 if (obj.getTarget().getLabel()
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Mail")) {
@@ -3212,33 +3294,41 @@ public class ParserApplication {
                         .equals("Quik")) {
                     if (buyList.contains(obj.getName().getText()) == true) {
                         status = 1;
-                        if(obj.getjCheckBox().isSelected()) {
-                            sellWebHook(order, status, obj, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                sellWebHook(order, status, obj, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getS();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                            obj.getEq().setS(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openSellOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getS();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
-                        obj.getEq().setS(mapEq);
                         sellList.add(obj.getName().getText());
                         buyList.remove(obj.getName().getText());
                     } else {
                         status = 0;
-                        if(obj.getjCheckBox().isSelected()) {
-                            sellWebHook(order, status, obj, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                sellWebHook(order, status, obj, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getS();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                            obj.getEq().setS(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openSellOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getS();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
-                        obj.getEq().setS(mapEq);
                         sellList.add(obj.getName().getText());
                     }
                     holdList.remove(obj.getName().getText());
                     serializeBuy(buyList);
                     serializeSell(sellList);
                     serializeHold(holdList);
-                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                    s.put(obj.getIdObject(),obj);
+                    HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(), obj);
                     customWebHooksModule.save(s);
                 }
                 if (obj.getTarget().getLabel()
@@ -3252,27 +3342,35 @@ public class ParserApplication {
                         .equals("Quik")) {
                     if (buyList.contains(obj.getName().getText()) == true) {
                         status = 1;
-                        if(obj.getjCheckBox().isSelected()) {
-                            holdWebHook(order, status, obj, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                holdWebHook(order, status, obj, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getS();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
+                            obj.getEq().setS(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openHoldOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getS();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
-                        obj.getEq().setS(mapEq);
-                        HashMap<Integer,DesktopObject> s=new HashMap<>();
-                        s.put(obj.getIdObject(),obj);
+                        HashMap<Integer, DesktopObject> s = new HashMap<>();
+                        s.put(obj.getIdObject(), obj);
                         customWebHooksModule.save(s);
                     } else if (sellList.contains(obj.getName().getText()) == true) {
                         status = -1;
-                        if(obj.getjCheckBox().isSelected()) {
-                            holdWebHook(order, status, obj, mapPrice);
+                        if (!obj.getType().getSelectedItem().toString().equals("XBTUSD")) {
+                            if (obj.getjCheckBox().isSelected()) {
+                                holdWebHook(order, status, obj, mapPrice);
+                            }
+                            mapPrice = customWebHooksModule.getPriceFromQuik();
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
+                            obj.getEq().setB(mapEq);
+                        } else {
+                            BitmexWebHookUtils.openHoldOrder(dialog, text, pozitionBitmex, status, obj, test);
                         }
-                        mapPrice=customWebHooksModule.getPriceFromQuik();
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
-                        obj.getEq().setB(mapEq);
-                        HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                        s.put(obj.getIdObject(),obj);
+                        HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                        s.put(obj.getIdObject(), obj);
                         customWebHooksModule.save(s);
                     }
                     sellList.remove(obj.getName().getText());
@@ -3288,19 +3386,20 @@ public class ParserApplication {
                     test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
                 }
             }
-            customWebHooksModule.getMap().forEach((k,v)->bf.append(v.getName().getText()).append(":").append(v.getEq().getTotalResult()));
-            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList+" Result: "+
+            customWebHooksModule.getMap().forEach((k, v) -> bf.append(v.getName().getText()).append(": ").append(v.getEq().getTotalResult()).append(";"));
+            customWebHooksModule.setLineState("Buy: " + buyList + ";" + "Sell: " + sellList + ";" + "Hold: " + holdList + " Result: " +
                     bf.toString());
             bf.delete(0, bf.length());
         }
 
         /**
          * Вебухуки с докупкой и допродажей
+         *
          * @param position
          * @param order
          */
         public synchronized void sendSignalWebHookPyramiding(int position, OrderWebHook order) {
-            ArrayList<Integer> mapEq=null;
+            ArrayList<Integer> mapEq = null;
             Map<String, String> mapPrice = customWebHooksModule.getPriceFromQuik();
 //            mapPrice.put("SI", String.valueOf(60000+new Random().nextInt(2500)));
 //            mapPrice.put("BR", String.valueOf(15+new Random().nextInt(5)));
@@ -3311,29 +3410,29 @@ public class ParserApplication {
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Quik")) {
                     if (sellList.contains(obj.getName().getText()) == true) {
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        mapEq = obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
                         obj.getEq().setB(mapEq);
                         status = -1;
                         buyList.add(obj.getName().getText());
                         sellList.remove(obj.getName().getText());
                     } else {
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        mapEq = obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
                         obj.getEq().setB(mapEq);
                         status = 0;
                         buyList.add(obj.getName().getText());
                     }
                     holdList.remove(obj.getName().getText());
-                    if(obj.getjCheckBox().isSelected()) {
+                    if (obj.getjCheckBox().isSelected()) {
                         buyWebHook(obj, order, status, mapPrice);
                     }
                     serializeBuy(buyList);
                     serializeSell(sellList);
                     serializeHold(holdList);
-                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                    s.put(obj.getIdObject(),obj);
+                    HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(), obj);
                     customWebHooksModule.save(s);
                 }
                 if (obj.getTarget().getLabel()
@@ -3347,7 +3446,7 @@ public class ParserApplication {
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Quik")) {
                     if (buyList.contains(obj.getName().getText()) == true) {
-                        mapEq=obj.getEq().getS();
+                        mapEq = obj.getEq().getS();
                         mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
                         mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
                         obj.getEq().setS(mapEq);
@@ -3355,21 +3454,21 @@ public class ParserApplication {
                         sellList.add(obj.getName().getText());
                         buyList.remove(obj.getName().getText());
                     } else {
-                        mapEq=obj.getEq().getS();
+                        mapEq = obj.getEq().getS();
                         mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
                         obj.getEq().setS(mapEq);
                         status = 0;
                         sellList.add(obj.getName().getText());
                     }
                     holdList.remove(obj.getName().getText());
-                    if(obj.getjCheckBox().isSelected()) {
+                    if (obj.getjCheckBox().isSelected()) {
                         sellWebHook(order, status, obj, mapPrice);
                     }
                     serializeBuy(buyList);
                     serializeSell(sellList);
                     serializeHold(holdList);
-                    HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                    s.put(obj.getIdObject(),obj);
+                    HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                    s.put(obj.getIdObject(), obj);
                     customWebHooksModule.save(s);
                 }
                 if (obj.getTarget().getLabel()
@@ -3383,25 +3482,25 @@ public class ParserApplication {
                         .equals("Quik")) {
                     if (buyList.contains(obj.getName().getText()) == true) {
                         status = 1;
-                        mapEq=obj.getEq().getS();
+                        mapEq = obj.getEq().getS();
                         mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())));
                         obj.getEq().setS(mapEq);
-                        HashMap<Integer,DesktopObject> s=new HashMap<>();
-                        s.put(obj.getIdObject(),obj);
+                        HashMap<Integer, DesktopObject> s = new HashMap<>();
+                        s.put(obj.getIdObject(), obj);
                         customWebHooksModule.save(s);
                     } else if (sellList.contains(obj.getName().getText()) == true) {
-                        mapEq=obj.getEq().getB();
-                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText()))*(-1));
+                        mapEq = obj.getEq().getB();
+                        mapEq.add(Integer.valueOf(mapPrice.get(obj.getSeccode().getText())) * (-1));
                         obj.getEq().setB(mapEq);
-                        HashMap<Integer,DesktopObject> s=customWebHooksModule.getMap();
-                        s.put(obj.getIdObject(),obj);
+                        HashMap<Integer, DesktopObject> s = customWebHooksModule.getMap();
+                        s.put(obj.getIdObject(), obj);
                         customWebHooksModule.save(s);
                         status = -1;
                     }
                     sellList.remove(obj.getName().getText());
                     buyList.remove(obj.getName().getText());
                     holdList.add(obj.getName().getText());
-                    if(obj.getjCheckBox().isSelected()) {
+                    if (obj.getjCheckBox().isSelected()) {
                         holdWebHook(order, status, obj, mapPrice);
                     }
                     serializeBuy(buyList);
@@ -3414,13 +3513,13 @@ public class ParserApplication {
                     test.sendSignal("HOLD", "TS_1: HOLD in signal at price " + obj.getSeccode().getText() + " " + mapPrice.get(obj.getSeccode().getText()) + " " + new Date());
                 }
             }
-            customWebHooksModule.getMap().forEach((k,v)->bf.append(k).append(":").append(v.getEq().getTotalResult()));
-            customWebHooksModule.setLineState("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList+"||"+
+            customWebHooksModule.getMap().forEach((k, v) -> bf.append(k).append(": ").append(v.getEq().getTotalResult()).append(";"));
+            customWebHooksModule.setLineState("Buy: " + buyList + ";" + "Sell: " + sellList + ";" + "Hold: " + holdList + "||" +
                     bf.toString());
             bf.delete(0, bf.length());
         }
 
-        private synchronized void buyWebHook(DesktopObject obj, OrderWebHook order, int status, Map<String, String> price) {
+        public synchronized void buyWebHook(DesktopObject obj, OrderWebHook order, int status, Map<String, String> price) {
             pr.put("TYPE", "M");
             pr.put("TRANS_ID", "0");
             pr.put("ACTION", "NEW_ORDER");
@@ -3430,23 +3529,23 @@ public class ParserApplication {
             pr.setProperty("SECCODE", obj.getSeccode().getText());
             pr.setProperty("OPERATION", "B");
             try {
-                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())):"0");
+                pr.setProperty("PRICE", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())) : "0");
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(new JFrame("Message"), "Код интсрумента не найден");
             }
             pr.setProperty("TRANS_ID", String.valueOf(++ID));
             String str = "";
             if (status == -1) {
-                if(dialog.getSeparateOrderCheckBox().isSelected() == Boolean.FALSE) {
+                if (dialog.getSeparateOrderCheckBox().isSelected() == Boolean.FALSE) {
                     pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2));
                     for (int i = 0; i < pr.size(); i++) {
                         str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
                     }
                 }
-                separateBuyOrderWebHook(pr,listField,str,status);
+                separateBuyOrderWebHook(pr, listField, str, status);
             }
             if (status == 0) {
-                pr.setProperty("QUANTITY",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(obj.getQuantity().getText())):"0");
+                pr.setProperty("QUANTITY", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(obj.getQuantity().getText())) : "0");
                 for (int i = 0; i < listField.size(); i++) {
                     str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
                 }
@@ -3468,7 +3567,7 @@ public class ParserApplication {
             }
         }
 
-        private synchronized void sellWebHook(OrderWebHook order, int status, DesktopObject obj, Map<String, String> price) {
+        public synchronized void sellWebHook(OrderWebHook order, int status, DesktopObject obj, Map<String, String> price) {
             pr.put("TYPE", "M");
             pr.put("TRANS_ID", "0");
             pr.put("ACTION", "NEW_ORDER");
@@ -3480,19 +3579,19 @@ public class ParserApplication {
             pr.setProperty("TRANS_ID", String.valueOf(++ID));
             try {
 
-                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())):"0");
+                pr.setProperty("PRICE", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())) : "0");
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(new JFrame("Message"), "Код инструмента не найден");
             }
             String str = "";
             if (status == 1) {
-                if(dialog.getSeparateOrderCheckBox().isSelected() == false){
-                    pr.setProperty("QUANTITY", obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2):"0");
+                if (dialog.getSeparateOrderCheckBox().isSelected() == false) {
+                    pr.setProperty("QUANTITY", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2) : "0");
                     for (int i = 0; i < listField.size(); i++) {
                         str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
                     }
                 }
-                separateSellOrderWebHook(pr,listField,str,status);
+                separateSellOrderWebHook(pr, listField, str, status);
             }
             if (status == 0) {
                 pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
@@ -3529,7 +3628,7 @@ public class ParserApplication {
             if (status == 1) {
                 pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
                 pr.setProperty("OPERATION", "S");
-                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())):"0");
+                pr.setProperty("PRICE", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) - Integer.parseInt(obj.getDelta().getText())) : "0");
                 for (int i = 0; i < listField.size(); i++) {
                     str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
                 }
@@ -3537,7 +3636,7 @@ public class ParserApplication {
             } else if (status == -1) {
                 pr.setProperty("QUANTITY", String.valueOf(Integer.parseInt(obj.getQuantity().getText())));
                 pr.setProperty("OPERATION", "B");
-                pr.setProperty("PRICE",obj.getType().getSelectedItem().toString().equals("SPBFUT")?String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())):"0");
+                pr.setProperty("PRICE", obj.getType().getSelectedItem().toString().equals("SPBFUT") ? String.valueOf(Integer.parseInt(price.get(obj.getSeccode().getText())) + Integer.parseInt(obj.getDelta().getText())) : "0");
                 for (int i = 0; i < listField.size(); i++) {
                     str += listField.get(i) + "=" + pr.getProperty(String.valueOf(listField.get(i))) + "; ";
                 }
@@ -3559,9 +3658,9 @@ public class ParserApplication {
         }
     }
 
-    private void separateSellOrderWebHook(Properties pr, ArrayList<String> list, String strp,int st) {
-        String str="";
-        if (st == 1 && dialog.getSeparateOrderCheckBox().isSelected() == Boolean.TRUE){
+    private void separateSellOrderWebHook(Properties pr, ArrayList<String> list, String strp, int st) {
+        String str = "";
+        if (st == 1 && dialog.getSeparateOrderCheckBox().isSelected() == Boolean.TRUE) {
             for (int j = 0; j < 2; j++) {
                 if (j == 1) {
                     pr.setProperty("TRANS_ID", String.valueOf(++ID));
@@ -3592,8 +3691,8 @@ public class ParserApplication {
         }
     }
 
-    private void separateBuyOrderWebHook(Properties pr,ArrayList<String> list, String strp,int st) {
-        String str="";
+    private void separateBuyOrderWebHook(Properties pr, ArrayList<String> list, String strp, int st) {
+        String str = "";
         if (st == -1 && dialog.getSeparateOrderCheckBox().isSelected() == Boolean.TRUE) {
             for (int j = 0; j < 2; j++) {
                 if (j == 1) {
@@ -3624,7 +3723,7 @@ public class ParserApplication {
         }
     }
 
-    private DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
+    public DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
         for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
             if (entry.getValue().getName().getText().equals(nameTs)) {
                 return entry.getValue();
@@ -3691,7 +3790,7 @@ public class ParserApplication {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if(list[0]==null) {
+        if (list[0] == null) {
             list[0] = new ArrayList<String>();
         }
         if (list[1] == null) {
@@ -3705,16 +3804,29 @@ public class ParserApplication {
     }
 
     //Запись текста в файл
-    static void write_log(String text,String path, String content) {
+    static void write_log(String text, String path, String content) {
         BufferedWriter wr = null;
         try {
             wr = new BufferedWriter(new FileWriter(path, true));
-            wr.write(text+":"+new Date() + " " + content);
+            wr.write(text + ":" + new Date() + " " + content);
             wr.write("\n");
             wr.flush();
             wr.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static class ManageCapital {
+        private String currentPoz;
+        private String targetPoz;
+        private int countLoss;
+        private int profit;
+
+        private void manageStrategy(Object... param) {
+            if (countLoss > 5) {
+                targetPoz = currentPoz + 1;
+            }
         }
     }
 }

@@ -44,6 +44,8 @@ dependencies {
     compile("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.4")
     implementation 'org.springframework.boot:spring-boot-starter-jetty'
     compile group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
+    compile group: 'com.google.guava', name: 'guava', version: '20.0'
+    compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
 }
 
 test {

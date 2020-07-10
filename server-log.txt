@@ -1,8 +1,0 @@
-Fri May 08 09:27:26 MSK 2020 {"nameTs":"1","operation":"buy"}
-Fri May 08 09:27:37 MSK 2020 {"nameTs":"1","operation":"sell"}
-Fri May 08 09:27:49 MSK 2020 {"nameTs":"1","operation":"buy"}
-Fri May 08 09:27:57 MSK 2020 {"nameTs":"1","operation":"hold"}
-Fri May 08 09:29:49 MSK 2020 {"nameTs":"1","operation":"hold"}
-Fri May 08 09:29:56 MSK 2020 {"nameTs":"1","operation":"buy"}
-Fri May 08 09:30:02 MSK 2020 {"nameTs":"1","operation":"sell"}
-Fri May 08 09:30:10 MSK 2020 {"nameTs":"1","operation":"buy"}

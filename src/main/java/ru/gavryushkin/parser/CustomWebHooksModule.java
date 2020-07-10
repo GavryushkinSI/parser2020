@@ -17,12 +17,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class CustomWebHooksModule {
     private volatile Map<String, String> infoPrice = new HashMap<>();
-    private volatile HashMap<Integer, DesktopObject> map = new HashMap<>();
+    private volatile HashMap<Integer, DesktopObject> map;
     private static int idObject = 0;
     private static int i = 0;
     private static int n = 0;
@@ -38,29 +40,59 @@ public class CustomWebHooksModule {
     private Color red = new Color(202, 52, 59);
     private Color blueLight = new Color(24, 117, 116);
     private ParserApplication.Dialog dialog;
+    private ParserApplication.WebHooksModule wb;
     private JTextField lineState;
+    private JComboBox nameTs;
 
-    public CustomWebHooksModule(ParserApplication.Dialog dialog) {
+    public CustomWebHooksModule(ParserApplication.Dialog dialog, ParserApplication.WebHooksModule wb) {
         this.dialog = dialog;
+        this.wb = wb;
     }
 
     public void init() throws ClassNotFoundException, UnsupportedLookAndFeelException, InstantiationException, IllegalAccessException {
-        System.out.println(map.size());
-        //UIManager.setLookAndFeel("com.jtattoo.plaf.graphite.GraphiteLookAndFeel");
         frame = new JDialog(ParserApplication.frame, "CUSTOM WEBHOOKS MODULE");
         frame.setIconImage(new ImageIcon("icon/icons8-webhook-22.png").getImage());
-        frame.setBounds(300, 300, 1200, 90);
+        frame.setBounds(300, 300, 600, 100);
         JButton button = new JButton("ADD STRATEGY", new ImageIcon("icon/icons8-add-20.png"));
+        JButton buyBtn = new JButton("BUY");
+        buyBtn.setBackground(green);
+        JButton sellBtn = new JButton("SELL");
+        sellBtn.setBackground(red);
         button.setBackground(blueDark);
         button.setForeground(Color.white);
-        frame.add(button, BorderLayout.NORTH);
-        lineState=new JTextField();
+        JPanel panelBtn = new JPanel();
+        panelBtn.setLayout(new FlowLayout());
+        panelBtn.add(button);
+        panelBtn.add(buyBtn);
+        panelBtn.add(sellBtn);
+        panelBtn.setBackground(dark);
+        frame.add(panelBtn, BorderLayout.NORTH);
+        lineState = new JTextField();
         JPanel panel = new JPanel(new BorderLayout());
         GridLayout gridLayout = new GridLayout(0, 13);
         JPanel gridPanel = new JPanel(gridLayout);
         initialize(gridPanel, frame);
+        if(map==null){
+            map=new HashMap<>();
+        }
+        nameTs = new JComboBox<String>();
+        buyBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                DesktopObject obj = getDetails((String) nameTs.getSelectedItem(), getMap());
+                wb.buyWebHook(obj, null, 0, getPriceFromQuik());
+            }
+        });
+        sellBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                DesktopObject obj = getDetails((String) nameTs.getSelectedItem(), getMap());
+                wb.sellWebHook(null, 0, obj, getPriceFromQuik());
+            }
+        });
+        nameTs.setPreferredSize(new Dimension(120, 30));
+        panelBtn.add(nameTs);
         System.out.println(map.size());
-        //frame.getContentPane().setBackground(dark);
         idObject = map.size();
         JScrollPane screenScroll = new JScrollPane(gridPanel);
         panel.add(screenScroll);
@@ -69,13 +101,14 @@ public class CustomWebHooksModule {
             public void mouseClicked(MouseEvent e) {
                 PTextField name = new PTextField("nameTS");
                 PTextField account = new PTextField("account");
+                account.setToolTipText("Номер счёта");
                 account.setText(dialog.getAccounttext());
                 account.setForeground(Color.black);
                 PTextField clientCode = new PTextField("clientCode");
                 clientCode.setForeground(Color.black);
                 clientCode.setText(dialog.getClientcodetext());
                 PTextField secCode = new PTextField("codeQuik");
-                JComboBox type = new JComboBox(new String[]{"SPBFUT", "TQBR"});
+                JComboBox type = new JComboBox(new String[]{"SPBFUT", "TQBR", "XBTUSD","IB"});
                 type.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseEntered(MouseEvent e) {
@@ -271,8 +304,8 @@ public class CustomWebHooksModule {
         });
         frame.add(panel);
         frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-        frame.add(lineState,BorderLayout.PAGE_END);
-        lineState.setText("Buy: "+buyList+";"+"Sell: "+sellList+";"+"Hold: "+holdList);
+        frame.add(lineState, BorderLayout.PAGE_END);
+        lineState.setText("Buy: " + buyList + ";" + "Sell: " + sellList + ";" + "Hold: " + holdList);
         lineState.setEditable(false);
         lineState.setBackground(dark);
         lineState.setForeground(Color.white);
@@ -288,6 +321,7 @@ public class CustomWebHooksModule {
             oos.close();
             fos.close();
             map.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
+              nameTs.setModel(new DefaultComboBoxModel(getSetNameTs(getMap()).toArray(new String[getSetNameTs(getMap()).size()])));
         } catch (Exception e) {
         }
     }
@@ -503,7 +537,9 @@ public class CustomWebHooksModule {
             rd = new BufferedReader(new FileReader("quote.txt"));
             while (rd.ready()) {
                 str = rd.readLine().split(":");
-                infoPrice.put(str[0], str[1]);
+                if (!str[1].equals("0") || !str[1].equals(" ") || !str[1].equals("")) {
+                    infoPrice.put(str[0], str[1]);
+                }
             }
             rd.close();
         } catch (Exception e) {
@@ -516,8 +552,8 @@ public class CustomWebHooksModule {
         BufferedWriter writer = null;
         BufferedReader rd = null;
         try {
-            rd = new BufferedReader(new FileReader(type.equals("SPBFUT")?"fut.txt":"stock.txt"));
-            writer = new BufferedWriter(new FileWriter(type.equals("SPBFUT")?"fut.txt":"stock.txt", true));
+            rd = new BufferedReader(new FileReader(type.equals("SPBFUT") ? "fut.txt" : "stock.txt"));
+            writer = new BufferedWriter(new FileWriter(type.equals("SPBFUT") ? "fut.txt" : "stock.txt", true));
             String str = rd.ready() ? rd.readLine() : " ";
             for (Map.Entry<Integer, DesktopObject> entry : map.entrySet()) {
                 if (!str.contains(entry.getValue().getSeccode().getText())) {
@@ -588,6 +624,23 @@ public class CustomWebHooksModule {
             holdList.remove(o.getName().getText());
         } catch (Exception e) {
         }
+    }
+
+    private DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
+        for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
+            if (entry.getValue().getName().getText().equals(nameTs)) {
+                return entry.getValue();
+            }
+
+        }
+        return null;
+    }
+    private Set<String> getSetNameTs(HashMap<Integer, DesktopObject> objectHashMap){
+        Set<String> nameTsSet=new HashSet<>(objectHashMap.size());
+        for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
+            nameTsSet.add(entry.getValue().getName().getText());
+        }
+        return nameTsSet;
     }
 
     public ParserApplication.Dialog getDialog() {

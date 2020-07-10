@@ -25,9 +25,27 @@ public class DesktopObject implements Serializable {
     private JButton target;
     private JButton equity;
     private Graph eq;
+    //доп. поля для управления капиталом
+    //текущая позиция
+    private String currentPoz;
+    //целевая позиция
+    private String targetPoz;
+    //количество убытков подряд
+    private int countLoss;
+    //текущий профит +/-
+    private int profit;
+    //Дополнительные поля для Interactive Brokers
+    //Наименование биржи
+    private String exchange;
+    //Номер контракта ID
+    private String contractID;
+    //Локальный символ
+    private String localSymbol;
+    //Тип инструмента
+    private String secType;
 
-    public DesktopObject(PTextField name, PTextField account, PTextField clientCode, PTextField seccode, JComboBox type, PTextField quantity, PTextField delta, JToggleButton jCheckBox, int idObject, JButton target, JButton equity,Graph list) {
-        this.name=name;
+    public DesktopObject(PTextField name, PTextField account, PTextField clientCode, PTextField seccode, JComboBox type, PTextField quantity, PTextField delta, JToggleButton jCheckBox, int idObject, JButton target, JButton equity, Graph list) {
+        this.name = name;
         this.account = account;
         this.clientCode = clientCode;
         this.seccode = seccode;
@@ -36,9 +54,9 @@ public class DesktopObject implements Serializable {
         this.delta = delta;
         this.jCheckBox = jCheckBox;
         this.idObject = idObject;
-        this.target=target;
-        this.equity=equity;
-        this.eq=list;
+        this.target = target;
+        this.equity = equity;
+        this.eq = list;
     }
 
     public PTextField getName() {
@@ -129,9 +147,49 @@ public class DesktopObject implements Serializable {
         this.equity = equity;
     }
 
+    public Graph getEq() {
+        return eq;
+    }
+
+    public void setEq(Graph eq) {
+        this.eq = eq;
+    }
+
+    public String getCurrentPoz() {
+        return currentPoz;
+    }
+
+    public void setCurrentPoz(String currentPoz) {
+        this.currentPoz = currentPoz;
+    }
+
+    public String getTargetPoz() {
+        return targetPoz;
+    }
+
+    public void setTargetPoz(String targetPoz) {
+        this.targetPoz = targetPoz;
+    }
+
+    public int getCountLoss() {
+        return countLoss;
+    }
+
+    public void setCountLoss(int countLoss) {
+        this.countLoss = countLoss;
+    }
+
+    public int getProfit() {
+        return profit;
+    }
+
+    public void setProfit(int profit) {
+        this.profit = profit;
+    }
+
     @Override
     public String toString() {
-        return "DesktopObPect{" +
+        return "DesktopObject{" +
                 "name=" + name.getText() +
                 ", account=" + account.getText() +
                 ", clientCode=" + clientCode.getText() +
@@ -139,18 +197,15 @@ public class DesktopObject implements Serializable {
                 ", type=" + type.getSelectedItem() +
                 ", quantity=" + quantity.getText() +
                 ", delta=" + delta.getText() +
-                ", PCheckBox=" + jCheckBox.isSelected() +
-                ", idObPect=" + idObject +
-                ", target=" + target.getLabel() +
-                ",eq="+eq+
+                ", jCheckBox=" + jCheckBox.getText() +
+                ", idObject=" + idObject +
+                ", target=" + target.getText() +
+                ", equity=" + equity.getText() +
+                ", eq=" + eq +
+                ", currentPoz='" + currentPoz + '\'' +
+                ", targetPoz='" + targetPoz + '\'' +
+                ", countLoss=" + countLoss +
+                ", profit=" + profit +
                 '}';
-    }
-
-    public Graph getEq() {
-        return eq;
-    }
-
-    public void setEq(Graph eq) {
-        this.eq = eq;
     }
 }
