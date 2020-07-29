@@ -27,7 +27,7 @@ public class DesktopObject implements Serializable {
     private Graph eq;
     //доп. поля для управления капиталом
     //текущая позиция
-    private String currentPoz;
+    private int currentPosition = 0;
     //целевая позиция
     private String targetPoz;
     //количество убытков подряд
@@ -36,15 +36,16 @@ public class DesktopObject implements Serializable {
     private int profit;
     //Дополнительные поля для Interactive Brokers
     //Наименование биржи
-    private String exchange;
+    private PTextField exchange;
     //Номер контракта ID
-    private String contractID;
+    private PTextField contractID;
     //Локальный символ
-    private String localSymbol;
+    private PTextField localSymbol;
     //Тип инструмента
-    private String secType;
+    private PTextField secType;
 
-    public DesktopObject(PTextField name, PTextField account, PTextField clientCode, PTextField seccode, JComboBox type, PTextField quantity, PTextField delta, JToggleButton jCheckBox, int idObject, JButton target, JButton equity, Graph list) {
+    public DesktopObject(PTextField name, PTextField account, PTextField clientCode, PTextField seccode, JComboBox type, PTextField quantity, PTextField delta, JToggleButton jCheckBox, int idObject, JButton target, JButton equity, Graph list,
+                         PTextField exchange, PTextField contractID, PTextField localSymbol, PTextField secType) {
         this.name = name;
         this.account = account;
         this.clientCode = clientCode;
@@ -57,6 +58,10 @@ public class DesktopObject implements Serializable {
         this.target = target;
         this.equity = equity;
         this.eq = list;
+        this.exchange = exchange;
+        this.contractID = contractID;
+        this.localSymbol = localSymbol;
+        this.secType = secType;
     }
 
     public PTextField getName() {
@@ -99,12 +104,21 @@ public class DesktopObject implements Serializable {
         this.type = type;
     }
 
+
+    public void setQuantity(PTextField quantity) {
+        this.quantity = quantity;
+    }
+
     public PTextField getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(PTextField quantity) {
-        this.quantity = quantity;
+    public void setQty(String newQty) {
+        this.quantity.setText(newQty);
+    }
+
+    public String getQty() {
+        return quantity.getText();
     }
 
     public PTextField getDelta() {
@@ -155,12 +169,12 @@ public class DesktopObject implements Serializable {
         this.eq = eq;
     }
 
-    public String getCurrentPoz() {
-        return currentPoz;
+    public int getCurrentPosition() {
+        return currentPosition;
     }
 
-    public void setCurrentPoz(String currentPoz) {
-        this.currentPoz = currentPoz;
+    public void setCurrentPosition(int currentPosition) {
+        this.currentPosition = currentPosition;
     }
 
     public String getTargetPoz() {
@@ -187,6 +201,39 @@ public class DesktopObject implements Serializable {
         this.profit = profit;
     }
 
+    public PTextField getExchange() {
+        return exchange;
+    }
+
+    public void setExchange(PTextField exchange) {
+        this.exchange = exchange;
+    }
+
+    public PTextField getContractID() {
+        return contractID;
+    }
+
+    public void setContractID(PTextField contractID) {
+        this.contractID = contractID;
+    }
+
+    public PTextField getLocalSymbol() {
+        return localSymbol;
+    }
+
+    public void setLocalSymbol(PTextField localSymbol) {
+        this.localSymbol = localSymbol;
+    }
+
+    public PTextField getSecType() {
+        return secType;
+    }
+
+    public void setSecType(PTextField secType) {
+        this.secType = secType;
+    }
+
+
     @Override
     public String toString() {
         return "DesktopObject{" +
@@ -202,7 +249,7 @@ public class DesktopObject implements Serializable {
                 ", target=" + target.getText() +
                 ", equity=" + equity.getText() +
                 ", eq=" + eq +
-                ", currentPoz='" + currentPoz + '\'' +
+                ", currentPoz='" + currentPosition + '\'' +
                 ", targetPoz='" + targetPoz + '\'' +
                 ", countLoss=" + countLoss +
                 ", profit=" + profit +

@@ -2,6 +2,8 @@ package ru.gavryushkin.parser;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -52,8 +54,9 @@ public class CustomWebHooksModule {
     public void init() throws ClassNotFoundException, UnsupportedLookAndFeelException, InstantiationException, IllegalAccessException {
         frame = new JDialog(ParserApplication.frame, "CUSTOM WEBHOOKS MODULE");
         frame.setIconImage(new ImageIcon("icon/icons8-webhook-22.png").getImage());
-        frame.setBounds(300, 300, 600, 100);
+        frame.setBounds(300, 300, 1420, 100);
         JButton button = new JButton("ADD STRATEGY", new ImageIcon("icon/icons8-add-20.png"));
+        button.setToolTipText("Добавить стратегию");
         JButton buyBtn = new JButton("BUY");
         buyBtn.setBackground(green);
         JButton sellBtn = new JButton("SELL");
@@ -69,28 +72,51 @@ public class CustomWebHooksModule {
         frame.add(panelBtn, BorderLayout.NORTH);
         lineState = new JTextField();
         JPanel panel = new JPanel(new BorderLayout());
-        GridLayout gridLayout = new GridLayout(0, 13);
+        GridLayout gridLayout = new GridLayout(0, 17);
         JPanel gridPanel = new JPanel(gridLayout);
         initialize(gridPanel, frame);
-        if(map==null){
-            map=new HashMap<>();
+        if (map == null) {
+            map = new HashMap<>();
         }
+
         nameTs = new JComboBox<String>();
         buyBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 DesktopObject obj = getDetails((String) nameTs.getSelectedItem(), getMap());
-                wb.buyWebHook(obj, null, 0, getPriceFromQuik());
+                String oldQuantity = obj.getQty();
+                if (obj.getType().getSelectedItem().toString().equals("IB")) {
+                    obj.setQty("1");
+                    wb.buyWebHookIb(obj, 0, null);
+                    obj.setQty(oldQuantity);
+                } else {
+                    obj.setQty("1");
+                    wb.buyWebHook(obj, null, 0, getPriceFromQuik());
+                    obj.setQty(oldQuantity);
+                }
             }
         });
+        buyBtn.setForeground(Color.WHITE);
+        sellBtn.setForeground(Color.WHITE);
         sellBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 DesktopObject obj = getDetails((String) nameTs.getSelectedItem(), getMap());
-                wb.sellWebHook(null, 0, obj, getPriceFromQuik());
+                String oldQuantity = obj.getQty();
+                if (obj.getType().getSelectedItem().toString().equals("IB")) {
+                    obj.setQty("1");
+                    wb.sellWebHookIb(obj, 0, null);
+                    obj.setQty(oldQuantity);
+                } else {
+                    obj.setQty("1");
+                    wb.sellWebHook(null, 0, obj, getPriceFromQuik());
+                    obj.setQty(oldQuantity);
+                }
             }
         });
         nameTs.setPreferredSize(new Dimension(120, 30));
+        nameTs.setToolTipText("Наименование стратегии " +
+                "в рамках которой нужно выставить ручную заявку");
         panelBtn.add(nameTs);
         System.out.println(map.size());
         idObject = map.size();
@@ -105,22 +131,24 @@ public class CustomWebHooksModule {
                 account.setText(dialog.getAccounttext());
                 account.setForeground(Color.black);
                 PTextField clientCode = new PTextField("clientCode");
+                clientCode.setToolTipText("Код клиента");
                 clientCode.setForeground(Color.black);
                 clientCode.setText(dialog.getClientcodetext());
-                PTextField secCode = new PTextField("codeQuik");
-                JComboBox type = new JComboBox(new String[]{"SPBFUT", "TQBR", "XBTUSD","IB"});
-                type.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        if (type.getSelectedItem().equals("SPBFUT")) {
-                            account.setText(dialog.getAccounttext());
-                        } else {
-                            account.setText(dialog.getAccounttext_2().getText());
-                        }
-                    }
-                });
+                PTextField secCode = new PTextField("symbol");
+                secCode.setToolTipText("Код инструмента");
+                JComboBox type = new JComboBox(new String[]{"SPBFUT", "TQBR", "XBTUSD", "IB"});
                 PTextField quantity = new PTextField("quantity");
+                quantity.setToolTipText("Количество лотов в заявке");
                 PTextField delta = new PTextField("delta");
+                delta.setToolTipText("Размер проскальзывания, для рынка акций значение всегда равно 0");
+                PTextField contractId = new PTextField("contractId");
+                contractId.setToolTipText("Уникальный идентификатор инструмента");
+                PTextField exchange = new PTextField("exchange");
+                exchange.setToolTipText("Наименование биржи");
+                PTextField localSymbol = new PTextField("localSymbol");
+                localSymbol.setToolTipText("Уточнённый код инструмента");
+                PTextField secType = new PTextField("secType");
+                secType.setToolTipText("Тип инструмента (акции, фьючерсы...");
                 JButton equity = new JButton("EQ", new ImageIcon("icon/icons8-graph-20.png"));
                 equity.setBackground(dark);
                 equity.setForeground(Color.white);
@@ -129,12 +157,20 @@ public class CustomWebHooksModule {
                 jCheckBox.setBackground(col1);
                 jCheckBox.setForeground(Color.white);
                 JButton target = new JButton("All", new ImageIcon("icon/icons8-all-20.png"));
-                DesktopObject object = new DesktopObject(name, account, clientCode, secCode, type, quantity, delta, jCheckBox, idObject++, target, equity, new Graph());
+                DesktopObject object = new DesktopObject(name, account, clientCode, secCode, type,
+                        quantity, delta, jCheckBox, idObject++,
+                        target, equity, new Graph(), exchange, contractId, localSymbol, secType);
+                type.addItemListener(new ItemListener() {
+                    @Override
+                    public void itemStateChanged(ItemEvent e) {
+                        checkType(object, red);
+                    }
+                });
                 equity.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         try {
-                            new LineChart1("EQ", object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
+                            new LineChart1("EQ " + object.getName().getText(), object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
                             object.getEq().getTotal().forEach(n -> System.out.println(n));
                         } catch (Exception e1) {
                             e1.printStackTrace();
@@ -149,6 +185,10 @@ public class CustomWebHooksModule {
                 gridPanel.add(object.getType());
                 gridPanel.add(object.getQuantity());
                 gridPanel.add(object.getDelta());
+                gridPanel.add(object.getContractID());
+                gridPanel.add(object.getExchange());
+                gridPanel.add(object.getLocalSymbol());
+                gridPanel.add(object.getSecType());
                 gridPanel.add(object.getjCheckBox());
                 gridPanel.add(object.getTarget());
                 gridPanel.add(object.getEquity());
@@ -208,6 +248,10 @@ public class CustomWebHooksModule {
                         type.setEnabled(false);
                         quantity.setEnabled(false);
                         delta.setEnabled(false);
+                        contractId.setEnabled(false);
+                        exchange.setEnabled(false);
+                        secType.setEnabled(false);
+                        localSymbol.setEnabled(false);
                         jCheckBox.setEnabled(false);
                         target.setEnabled(false);
                         name.setBackground(Color.LIGHT_GRAY);
@@ -217,6 +261,10 @@ public class CustomWebHooksModule {
                         type.setBackground(Color.LIGHT_GRAY);
                         quantity.setBackground(Color.LIGHT_GRAY);
                         delta.setBackground(Color.LIGHT_GRAY);
+                        contractId.setBackground(Color.LIGHT_GRAY);
+                        exchange.setBackground(Color.LIGHT_GRAY);
+                        secType.setBackground(Color.LIGHT_GRAY);
+                        localSymbol.setBackground(Color.LIGHT_GRAY);
                         boolean status = jCheckBox.isSelected();
                         jCheckBox.setBackground(status == true ? green : null);
                         jCheckBox.setOpaque(status == true ? true : false);
@@ -227,6 +275,7 @@ public class CustomWebHooksModule {
                         System.out.println(buyList);
                         System.out.println(sellList);
                         System.out.println(holdList);
+                        checkType(object, Color.lightGray);
                     }
                 });
                 edit.addMouseListener(new MouseAdapter() {
@@ -241,6 +290,10 @@ public class CustomWebHooksModule {
                         delta.setEnabled(true);
                         jCheckBox.setEnabled(true);
                         target.setEnabled(true);
+                        contractId.setEnabled(true);
+                        exchange.setEnabled(true);
+                        secType.setEnabled(true);
+                        localSymbol.setEnabled(true);
                         name.setBackground(Color.white);
                         account.setBackground(Color.white);
                         clientCode.setBackground(Color.white);
@@ -248,9 +301,14 @@ public class CustomWebHooksModule {
                         type.setBackground(Color.white);
                         quantity.setBackground(Color.white);
                         delta.setBackground(Color.white);
+                        contractId.setBackground(Color.white);
+                        exchange.setBackground(Color.white);
+                        secType.setBackground(Color.white);
+                        localSymbol.setBackground(Color.white);
                         boolean status = jCheckBox.isSelected();
                         jCheckBox.setBackground(status == true ? green : col1);
                         jCheckBox.setOpaque(false);
+                        checkType(object, red);
                     }
                 });
                 del.addMouseListener(new MouseAdapter() {
@@ -268,6 +326,10 @@ public class CustomWebHooksModule {
                         gridPanel.remove(obj.getDelta());
                         gridPanel.remove(obj.getTarget());
                         gridPanel.remove(obj.getEquity());
+                        gridPanel.remove(obj.getContractID());
+                        gridPanel.remove(obj.getExchange());
+                        gridPanel.remove(obj.getLocalSymbol());
+                        gridPanel.remove(obj.getSecType());
                         gridPanel.remove(edit);
                         gridPanel.remove(apply);
                         gridPanel.remove(del);
@@ -292,7 +354,7 @@ public class CustomWebHooksModule {
                 gridPanel.add(del);
                 frame.setVisible(false);
                 frame.setSize(frame.getWidth(), frame.getHeight() + 35);
-//                frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                checkType(object, red);
                 frame.setVisible(true);
             }
         });
@@ -310,6 +372,7 @@ public class CustomWebHooksModule {
         lineState.setBackground(dark);
         lineState.setForeground(Color.white);
         frame.setVisible(false);
+        save(map);
     }
 
     public synchronized void save(HashMap<Integer, DesktopObject> map) {
@@ -321,7 +384,8 @@ public class CustomWebHooksModule {
             oos.close();
             fos.close();
             map.forEach((k, v) -> System.out.println("Item : " + k + " Object : " + v));
-              nameTs.setModel(new DefaultComboBoxModel(getSetNameTs(getMap()).toArray(new String[getSetNameTs(getMap()).size()])));
+//            map.forEach((k, v) -> setBorder(true, v, Color.lightGray));
+            nameTs.setModel(new DefaultComboBoxModel(getSetNameTs(getMap()).toArray(new String[getSetNameTs(getMap()).size()])));
         } catch (Exception e) {
         }
     }
@@ -334,12 +398,6 @@ public class CustomWebHooksModule {
             ois.close();
             fis.close();
             Iterator<Map.Entry<Integer, DesktopObject>> entries = map.entrySet().iterator();
-//            PTextField name = new PTextField("nameTS");
-//            PTextField account = new PTextField("account");
-//            PTextField clientCode = new PTextField("clientCode");
-//            PTextField secCode = new PTextField("codeQuik");
-//            PTextField quantity = new PTextField("quantity");
-//            PTextField delta = new PTextField("delta");
             while (entries.hasNext()) {
                 Map.Entry<Integer, DesktopObject> entry = entries.next();
                 DesktopObject object = entry.getValue();
@@ -350,6 +408,10 @@ public class CustomWebHooksModule {
                 gridPanel.add(object.getType());
                 gridPanel.add(object.getQuantity());
                 gridPanel.add(object.getDelta());
+                gridPanel.add(object.getContractID());
+                gridPanel.add(object.getExchange());
+                gridPanel.add(object.getLocalSymbol());
+                gridPanel.add(object.getSecType());
                 gridPanel.add(object.getjCheckBox());
                 gridPanel.add(object.getTarget());
                 gridPanel.add(object.getEquity());
@@ -397,6 +459,10 @@ public class CustomWebHooksModule {
                 object.getQuantity().setEnabled(false);
                 object.getDelta().setEnabled(false);
                 object.getjCheckBox().setEnabled(false);
+                object.getExchange().setEnabled(false);
+                object.getContractID().setEnabled(false);
+                object.getSecType().setEnabled(false);
+                object.getLocalSymbol().setEnabled(false);
                 object.getName().setBackground(Color.LIGHT_GRAY);
                 object.getAccount().setBackground(Color.LIGHT_GRAY);
                 object.getClientCode().setBackground(Color.LIGHT_GRAY);
@@ -404,6 +470,10 @@ public class CustomWebHooksModule {
                 object.getType().setBackground(Color.LIGHT_GRAY);
                 object.getQuantity().setBackground(Color.LIGHT_GRAY);
                 object.getDelta().setBackground(Color.LIGHT_GRAY);
+                object.getExchange().setBackground(Color.LIGHT_GRAY);
+                object.getContractID().setBackground(Color.LIGHT_GRAY);
+                object.getLocalSymbol().setBackground(Color.LIGHT_GRAY);
+                object.getSecType().setBackground(Color.LIGHT_GRAY);
                 object.getTarget().setEnabled(false);
                 object.getEquity();
                 boolean status = object.getjCheckBox().isSelected();
@@ -416,6 +486,7 @@ public class CustomWebHooksModule {
                 System.out.println(buyList);
                 System.out.println(sellList);
                 System.out.println(holdList);
+                checkType(object, Color.lightGray);
             }
         });
         edit.addMouseListener(new MouseAdapter() {
@@ -430,6 +501,10 @@ public class CustomWebHooksModule {
                 object.getDelta().setEnabled(true);
                 object.getjCheckBox().setEnabled(true);
                 object.getTarget().setEnabled(true);
+                object.getExchange().setEnabled(true);
+                object.getContractID().setEnabled(true);
+                object.getSecType().setEnabled(true);
+                object.getLocalSymbol().setEnabled(true);
                 object.getName().setBackground(Color.white);
                 object.getAccount().setBackground(Color.white);
                 object.getClientCode().setBackground(Color.white);
@@ -437,9 +512,14 @@ public class CustomWebHooksModule {
                 object.getType().setBackground(Color.white);
                 object.getQuantity().setBackground(Color.white);
                 object.getDelta().setBackground(Color.white);
+                object.getExchange().setBackground(Color.white);
+                object.getContractID().setBackground(Color.white);
+                object.getSecType().setBackground(Color.white);
+                object.getLocalSymbol().setBackground(Color.white);
                 object.getjCheckBox().setOpaque(false);
                 boolean status = object.getjCheckBox().isSelected();
                 object.getjCheckBox().setBackground(status == true ? green : col1);
+                checkType(object, red);
             }
         });
         del.addMouseListener(new MouseAdapter() {
@@ -457,6 +537,10 @@ public class CustomWebHooksModule {
                 gridPanel.remove(obj.getDelta());
                 gridPanel.remove(obj.getTarget());
                 gridPanel.remove(obj.getEquity());
+                gridPanel.remove(obj.getExchange());
+                gridPanel.remove(obj.getSecType());
+                gridPanel.remove(obj.getLocalSymbol());
+                gridPanel.remove(obj.getContractID());
                 gridPanel.remove(edit);
                 gridPanel.remove(apply);
                 gridPanel.remove(del);
@@ -491,20 +575,16 @@ public class CustomWebHooksModule {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
-                    new LineChart1("EQ", object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
+                    new LineChart1("EQ " + object.getName().getText(), object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
                 } catch (Exception e1) {
                     e1.printStackTrace();
                 }
             }
         });
-        object.getType().addMouseListener(new MouseAdapter() {
+        object.getType().addItemListener(new ItemListener() {
             @Override
-            public void mouseEntered(MouseEvent e) {
-                if (object.getType().getSelectedItem().equals("SPBFUT")) {
-                    object.getAccount().setText(dialog.getAccounttext());
-                } else {
-                    object.getAccount().setText(dialog.getAccounttext_2().getText());
-                }
+            public void itemStateChanged(ItemEvent e) {
+                checkType(object, red);
             }
         });
         object.getTarget().addMouseListener(new MouseAdapter() {
@@ -528,6 +608,7 @@ public class CustomWebHooksModule {
         gridPanel.add(apply);
         gridPanel.add(edit);
         gridPanel.add(del);
+        setBorder(true, object, Color.lightGray);
     }
 
     public synchronized Map<String, String> getPriceFromQuik() {
@@ -626,7 +707,7 @@ public class CustomWebHooksModule {
         }
     }
 
-    private DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
+    public DesktopObject getDetails(String nameTs, HashMap<Integer, DesktopObject> objectHashMap) {
         for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
             if (entry.getValue().getName().getText().equals(nameTs)) {
                 return entry.getValue();
@@ -635,8 +716,9 @@ public class CustomWebHooksModule {
         }
         return null;
     }
-    private Set<String> getSetNameTs(HashMap<Integer, DesktopObject> objectHashMap){
-        Set<String> nameTsSet=new HashSet<>(objectHashMap.size());
+
+    private Set<String> getSetNameTs(HashMap<Integer, DesktopObject> objectHashMap) {
+        Set<String> nameTsSet = new HashSet<>(objectHashMap.size());
         for (Map.Entry<Integer, DesktopObject> entry : objectHashMap.entrySet()) {
             nameTsSet.add(entry.getValue().getName().getText());
         }
@@ -657,6 +739,101 @@ public class CustomWebHooksModule {
 
     public void setLineState(String lineState) {
         this.lineState.setText(lineState);
+    }
+
+    public void checkType(DesktopObject object, Color color) {
+        setBorder(true, object, color);
+        if (object.getType().getSelectedItem().equals("SPBFUT")) {
+            object.getAccount().setText(dialog.getAccounttext());
+            object.getAccount().setEnabled(true);
+            object.getDelta().setEnabled(true);
+            object.getSeccode().setEnabled(true);
+            object.getClientCode().setEnabled(true);
+            object.getExchange().setEnabled(false);
+            object.getContractID().setEnabled(false);
+            object.getSecType().setEnabled(false);
+            object.getLocalSymbol().setEnabled(false);
+        } else if (object.getType().getSelectedItem().equals("TQBR")) {
+            object.getAccount().setText(dialog.getAccounttext_2().getText());
+            object.getAccount().setEnabled(true);
+            object.getDelta().setEnabled(false);
+            object.getSeccode().setEnabled(true);
+            object.getClientCode().setEnabled(true);
+            object.getExchange().setEnabled(false);
+            object.getContractID().setEnabled(false);
+            object.getSecType().setEnabled(false);
+            object.getLocalSymbol().setEnabled(false);
+        } else if (object.getType().getSelectedItem().equals("XBTUSD")) {
+            object.getAccount().setEnabled(false);
+            object.getDelta().setEnabled(false);
+            object.getSeccode().setEnabled(false);
+            object.getClientCode().setEnabled(false);
+            object.getExchange().setEnabled(false);
+            object.getContractID().setEnabled(false);
+            object.getSecType().setEnabled(false);
+            object.getLocalSymbol().setEnabled(false);
+        } else if ((object.getType().getSelectedItem().equals("IB"))) {
+            object.getAccount().setEnabled(false);
+            object.getClientCode().setEnabled(false);
+            object.getSeccode().setEnabled(true);
+            object.getDelta().setEnabled(false);
+            object.getExchange().setEnabled(true);
+            object.getContractID().setEnabled(true);
+            object.getSecType().setEnabled(true);
+            object.getLocalSymbol().setEnabled(true);
+        }
+    }
+
+    private void setBorder(boolean use, DesktopObject object, Color color) {
+        if (object.getType().getSelectedItem().equals("SPBFUT")) {
+            object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getAccount().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getClientCode().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getDelta().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getSeccode().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getQuantity().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+        } else if (object.getType().getSelectedItem().equals("TQBR")) {
+            object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getAccount().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getClientCode().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getDelta().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSeccode().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getQuantity().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+        } else if (object.getType().getSelectedItem().equals("XBTUSD")) {
+            object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getAccount().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getClientCode().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getDelta().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSeccode().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getQuantity().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+        } else if ((object.getType().getSelectedItem().equals("IB"))) {
+            object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getAccount().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getClientCode().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getDelta().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getSeccode().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getQuantity().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getExchange().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getContractID().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getSecType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(color, 2));
+        }
     }
 }
 

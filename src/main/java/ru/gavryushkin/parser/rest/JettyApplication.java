@@ -41,7 +41,7 @@ public class JettyApplication {
     private static CustomWebHooksModule customWebHooksModule;
     static ServletContextHandler context;
     static String HOST = "";
-    static Map<Date,Integer> countRequest=new HashMap<>();
+    static Map<Date, Integer> countRequest = new HashMap<>();
 
     public JettyApplication(ParserApplication.Trade trade, ParserApplication.Dialog dialog, ParserApplication.WebHooksModule webHooksModule, CustomWebHooksModule customWebHooksModule) {
         this.trade = trade;
@@ -107,8 +107,8 @@ public class JettyApplication {
                 } else if (orderSide.equals("Hold")) {
                     trade.sendSignalWebHook(0);
                 }
-            }catch (Exception e){
-                Logger.write_log("WEBHOOK_REQUEST","orderlog.txt", Throwables.getStackTraceAsString(e));
+            } catch (Exception e) {
+                Logger.write_log("WEBHOOK_REQUEST", "orderlog.txt", Throwables.getStackTraceAsString(e));
             }
         }
     }
@@ -143,14 +143,21 @@ public class JettyApplication {
                         "<button style=\"color:white;width:150px;height:50px;background:blue;font-size:30px;\" type=\"submit\">REFRESH</button>\n" +
                         "</form>");
                 resp.getWriter().println("<form action=\"/buy\"\"/example/\">\n" +
-                        "<button style=\"color:white;width:100px;height:50px;background:green;font-size:30px;\" type=\"submit\">BUY</button>\n" +
+                        "<input name=\"buy\" type=\"submit\" value=\"BUY\" style=\"color:white;width:100px;height:50px;background:green;font-size:30px;\">\n" +
+                        "<br>\n" +
+                        "<br>\n" +
+                        "<input name=\"sell\" type=\"submit\" value=\"SELL\" style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\">\n" +
+                        "<p><b>Name Trading System:</b><br>\n" +
+                        "   <input name=\"name\" type=\"text\" size=\"23\">\n" +
+                        "  </p>" +
                         "</form>");
-                resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
-                        "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">SELL</button>\n" +
-                        "</form>");
-                resp.getWriter().println("<form action=\"/getStat\"\"/example/\">\n" +
-                        "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">STAT</button>\n" +
-                        "</form>");
+//                resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
+//                        "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">SELL</button>\n" +
+//                        "</form>");
+//                resp.getWriter().println("<form action=\"/sell\"\"/example/\">\n" +
+//                        "<button style=\"color:white;width:100px;height:50px;background:red;font-size:30px;\" type=\"submit\">SELL</button>\n" +
+//                        "</form>");
+                //resp.getWriter().println("<form input type=\"text\"</form>");
                 resp.getWriter().println("<div id=\"chartContainer\" style=\"height: 300px; width: 700px;border: solid 2px #010522;\"></div>\n" +
                         "\n" +
                         "<script src=\"https://canvasjs.com/assets/script/canvasjs.min.js\"></script>\n" +
@@ -262,23 +269,44 @@ public class JettyApplication {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             resp.setStatus(HttpServletResponse.SC_OK);
-            Map<Integer, DesktopObject> map=customWebHooksModule.getMap();
+            Map<Integer, DesktopObject> map = customWebHooksModule.getMap();
             req.getRequestDispatcher("/remote").forward(req, resp);
         }
     }
 
 
-    //Сервлет покупки
+    //Сервлет покупки (Общий сервлет покупки и продажи)
     public static class BuyServlet extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
             resp.setStatus(HttpServletResponse.SC_OK);
-            trade.Order_B();
+            try {
+                if (req.getParameter("name").equals("") && req.getParameter("buy") != null) {
+                    trade.Order_B();
+                } else if (req.getParameter("name").equals("") && req.getParameter("sell") != null) {
+                    trade.Order_S();
+                } else if (!req.getParameter("name").equals("")) {
+                    DesktopObject obj = customWebHooksModule.getDetails(req.getParameter("name"), customWebHooksModule.getMap());
+                    String oldQuantity = obj.getQty();
+                    if (req.getParameter("buy") != null) {
+                        obj.setQty("1");
+                        webHooksModule.buyWebHook(obj, null, 0, customWebHooksModule.getPriceFromQuik());
+                        obj.setQty(oldQuantity);
+                    } else if (req.getParameter("sell") != null) {
+                        obj.setQty("1");
+                        webHooksModule.sellWebHook(null, 0, obj, customWebHooksModule.getPriceFromQuik());
+                        obj.setQty(oldQuantity);
+                    }
+                }
+            } catch (Exception e) {
+                Logger.write_log("BuyServlet", "orderlog.txt", Throwables.getStackTraceAsString(e));
+            }
             req.getRequestDispatcher("/remote").forward(req, resp);
         }
     }
 
-    //Сервлет продажи
+    //Сервлет продажи(сервлет не используется)
+    @Deprecated
     public static class SellServlet extends HttpServlet {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -369,8 +397,8 @@ public class JettyApplication {
                 } else if (orderSide.equals("hold")) {
                     webHooksModule.sendSignalWebHook(0, orderWebHook);
                 }
-            }catch (Exception e){
-                Logger.write_log("CUSTOMWEBHOOK_REQUEST","orderlog.txt",Throwables.getStackTraceAsString(e));
+            } catch (Exception e) {
+                Logger.write_log("CUSTOMWEBHOOK_REQUEST", "orderlog.txt", Throwables.getStackTraceAsString(e));
             }
         }
     }
