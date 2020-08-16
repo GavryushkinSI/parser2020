@@ -12,6 +12,11 @@ import com.ib.client.Types;
 import com.ib.controller.ApiConnection;
 import com.ib.controller.ApiController;
 import com.ib.controller.Formats;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestTemplate;
 import ru.gavryushkin.parser.CustomWebHooksModule;
 import ru.gavryushkin.parser.DesktopObject;
 import ru.gavryushkin.parser.ParserApplication;
@@ -39,10 +44,12 @@ import java.util.List;
  * @author Gavryushkin S.I.
  */
 public class IBConnector implements ApiController.IConnectionHandler {
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final HttpHeaders headers = new HttpHeaders();
     private List<BigDecimal> completedOrders = new ArrayList<>();
     private TradesPanel tradesPanel;
     private static StringWriter wr = new StringWriter();
-    private static ArrayList<Integer> mapEq;
+    private static ArrayList<BigDecimal> mapEq;
     private final JTextArea msg = new JTextArea();
     private final List<String> m_acctList = new ArrayList<>();
     private static IConnectionConfiguration connectionConfiguration;
@@ -62,6 +69,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
     private boolean statusThread = false;
     private JButton connect;
     private CustomWebHooksModule cwm;
+    private BigDecimal big=new BigDecimal(-1);
     Color dark = new Color(2, 2, 2, 179);
 
     public IBConnector(IConnectionConfiguration connectionConfig, JFrame frame, CustomWebHooksModule cwm) {
@@ -117,7 +125,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
         tabbedPanel.addTab("Информация о контракте", contractInfoPanel);
         tabbedPanel.addTab("Сделки", tradesPanel);
         dialog.add(tabbedPanel);
-        dialog.setBounds(5000, 10, 700, 850);
+        dialog.setBounds(800, 10, 400, 550);
     }
 
     private class ConnectionPanel extends JPanel {
@@ -127,6 +135,12 @@ public class IBConnector implements ApiController.IConnectionHandler {
         private final JTextField connectOptions = new JTextField(connectionConfiguration.getDefaultConnectOptions(), 10);
         private final JLabel statusIB = new JLabel("Disconnected");
         private final JButton getOrder = new JButton();
+        private final JLabel url = new JLabel("URL");
+        private final JTextField urlText = new JTextField();
+        private final JLabel name = new JLabel("NameTs");
+        private final JTextField nameTxt = new JTextField();
+        private final JButton buyBtn = new JButton("BUY");
+        private final JButton sellBtn = new JButton("SELL");
 
         ConnectionPanel() {
             connect = new JButton("Connect");
@@ -190,6 +204,42 @@ public class IBConnector implements ApiController.IConnectionHandler {
             if (connectionConfiguration.getDefaultConnectOptions() != null) {
                 p1.add("Connect options", connectOptions);
             }
+            p1.add(url);
+            p1.add(urlText);
+            p1.add(name);
+            p1.add(nameTxt);
+            urlText.setText("http://188.120.250.228:80/customWebHook");
+            p1.add(buyBtn);
+            buyBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    try {
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        String body = "{\"nameTs\":\"" + nameTxt.getText() + "\",\"operation\":\"buy\"}";
+                        HttpEntity<String> entity = new HttpEntity(body, headers);
+                        restTemplate.exchange(
+                                urlText.getText(), HttpMethod.POST, entity, Void.class);
+                    }catch (Exception ex){
+                        JOptionPane.showMessageDialog(dialog,"Ошибка вебхук");
+                    }
+                }
+            });
+            p1.add(sellBtn);
+            sellBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    try {
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        String body = "{\"nameTs\":\"" + nameTxt.getText() + "\",\"operation\":\"sell\"}";
+                        HttpEntity<String> entity = new HttpEntity(body, headers);
+                        restTemplate.exchange(
+                                urlText.getText(), HttpMethod.POST, entity, Void.class);
+                    }catch (Exception ex){
+                    JOptionPane.showMessageDialog(dialog,"Ошибка вебхук");
+                }
+
+                }
+            });
             getOrder.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
@@ -325,22 +375,36 @@ public class IBConnector implements ApiController.IConnectionHandler {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        orderId = createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                true
-                        );
-//                    obj.getEq().setB(mapEq);
+                        if (obj.getjCheckBox().isSelected()) {
+                            orderId = createOrder(
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    true
+                            );
+                        }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(order.getPrice().multiply(big));
+                            mapEq.add(order.getPrice().multiply(big));
+                            obj.getEq().setB(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 } else if (status == 0) {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        orderId = createOrder(
+                        if (obj.getjCheckBox().isSelected()) {
+                            orderId = createOrder(
                                 obj.getSeccode().getText(),
                                 obj.getExchange().getText(),
                                 obj.getQuantity().getText(),
@@ -349,18 +413,25 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                 obj.getContractID().getText().replace("contractId", ""),
                                 true
                         );
-//                    pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
-//                            dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
-//                    mapEq = obj.getEq().getB();
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
-                        obj.getEq().setB(mapEq);
+                            }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(order.getPrice().multiply(big));
+                            obj.getEq().setB(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 }
             } else {
                 if (obj.getTarget().getLabel()
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Quik")) {
-                    orderId = createOrder(
+                        orderId = createOrder(
                             obj.getSeccode().getText(),
                             obj.getExchange().getText(),
                             String.valueOf(Integer.valueOf(order.getPosition()) - obj.getCurrentPosition()),
@@ -375,11 +446,11 @@ public class IBConnector implements ApiController.IConnectionHandler {
                     cwm.save(s);
                 }
             }
-            if (obj.getTarget().getLabel()
-                    .equals("All") || obj.getTarget().getLabel()
-                    .equals("Mail")) {
-                test.sendSignal("BUY", "TS_1: Buy in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
-            }
+//            if (obj.getTarget().getLabel()
+//                    .equals("All") || obj.getTarget().getLabel()
+//                    .equals("Mail")) {
+//                test.sendSignal("BUY", "TS_1: Buy in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
+//            }
         } catch (Exception e) {
             e.printStackTrace(new PrintWriter(wr));
             write_log("BUY", "orderlog.txt", wr.toString());
@@ -394,66 +465,84 @@ public class IBConnector implements ApiController.IConnectionHandler {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                false
-                        );
-//                    pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
-//                            dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
-//                    mapEq = obj.getEq().getS();
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
-                        obj.getEq().setS(mapEq);
+                        if (obj.getjCheckBox().isSelected()) {
+                            createOrder(
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    String.valueOf(Integer.parseInt(obj.getQuantity().getText()) * 2),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    false
+                            );
+                        }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getS();
+                            mapEq.add(order.getPrice());
+                            mapEq.add(order.getPrice());
+                            obj.getEq().setS(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 } else if (status == 0) {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                obj.getQuantity().getText(),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                false
-                        );
-//                    pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
-//                            dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
-//                    mapEq = obj.getEq().getS();
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
-                        obj.getEq().setS(mapEq);
+                        if (obj.getjCheckBox().isSelected()) {
+                            createOrder(
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    obj.getQuantity().getText(),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    false
+                            );
+                        }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(order.getPrice());
+                            obj.getEq().setB(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 }
             } else {
                 if (obj.getTarget().getLabel()
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Quik")) {
-                    createOrder(
-                            obj.getSeccode().getText(),
-                            obj.getExchange().getText(),
-                            String.valueOf(Math.abs(Integer.parseInt(order.getPosition()) - obj.getCurrentPosition())),
-                            obj.getSecType().getText().replace("secType", ""),
-                            obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                            obj.getContractID().getText().replace("contractId", ""),
-                            false
-                    );
+                    if (obj.getjCheckBox().isSelected()) {
+                        createOrder(
+                                obj.getSeccode().getText(),
+                                obj.getExchange().getText(),
+                                String.valueOf(Math.abs(Integer.parseInt(order.getPosition()) - obj.getCurrentPosition())),
+                                obj.getSecType().getText().replace("secType", ""),
+                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                obj.getContractID().getText().replace("contractId", ""),
+                                false
+                        );
+                    }
                 }
                 obj.setCurrentPosition(Integer.parseInt(order.getPosition()));
                 HashMap<Integer, DesktopObject> s = new HashMap<>();
                 s.put(obj.getIdObject(), obj);
                 cwm.save(s);
             }
-            if (obj.getTarget().getLabel()
-                    .equals("All") || obj.getTarget().getLabel()
-                    .equals("Mail")) {
-                test.sendSignal("SELL", "TS_1: Sell in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
-            }
+//            if (obj.getTarget().getLabel()
+//                    .equals("All") || obj.getTarget().getLabel()
+//                    .equals("Mail")) {
+//                test.sendSignal("SELL", "TS_1: Sell in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
+//            }
         } catch (Exception e) {
             e.printStackTrace(new PrintWriter(wr));
             write_log("SELL", "orderlog.txt", wr.toString());
@@ -468,47 +557,63 @@ public class IBConnector implements ApiController.IConnectionHandler {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                obj.getQuantity().getText(),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                false
-                        );
-//                    pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
-//                            dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
-//                    mapEq = obj.getEq().getS();
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
-                        obj.getEq().setS(mapEq);
+                        if (obj.getjCheckBox().isSelected()) {
+                            createOrder(
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    obj.getQuantity().getText(),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    false
+                            );
+                        }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getS();
+                            mapEq.add(order.getPrice());
+                            obj.getEq().setS(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 } else if (status == -1) {
                     if (obj.getTarget().getLabel()
                             .equals("All") || obj.getTarget().getLabel()
                             .equals("Quik")) {
-                        createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                obj.getQuantity().getText(),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                true
-                        );
-//                    pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
-//                            dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
-//                    mapEq = obj.getEq().getB();
-//                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
-                        obj.getEq().setB(mapEq);
+                        if (obj.getjCheckBox().isSelected()) {
+                            createOrder(
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    obj.getQuantity().getText(),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    true
+                            );
+                        }
+                    }
+                    if(order!=null) {
+                        if(order.getPrice()!=null) {
+                            mapEq = obj.getEq().getB();
+                            mapEq.add(order.getPrice().multiply(big));
+                            obj.getEq().setB(mapEq);
+                            obj.countLoss();
+                            HashMap<Integer, DesktopObject> s = new HashMap<>();
+                            s.put(obj.getIdObject(), obj);
+                            cwm.save(s);
+                        }
                     }
                 }
             }
-            if (obj.getTarget().getLabel()
-                    .equals("All") || obj.getTarget().getLabel()
-                    .equals("Mail")) {
-                test.sendSignal("SELL", "TS_1: Hold in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
-            }
+//            if (obj.getTarget().getLabel()
+//                    .equals("All") || obj.getTarget().getLabel()
+//                    .equals("Mail")) {
+//                test.sendSignal("SELL", "TS_1: Hold in signal at price " + obj.getSeccode().getText() + " " + " " + new Date());
+//            }
         } catch (Exception e) {
             StringWriter wr = new StringWriter();
             e.printStackTrace(new PrintWriter(wr));
@@ -533,7 +638,6 @@ public class IBConnector implements ApiController.IConnectionHandler {
 
     private int createOrder(String symbol, String exchange, String quantity, String secType, String localSymbol, String contractId, boolean orderSide) {
         Contract contract = createContract(symbol, exchange, secType, localSymbol, contractId);
-
         // https://interactivebrokers.github.io/tws-api/classIBApi_1_1Order.html
         Order order = new Order();
         order.transmit(true);
@@ -546,7 +650,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
 
     protected Contract createContract(String symbol, String exchange, String secType, String localSymbol, String contractId) {
         return new Contract(!contractId.isEmpty() && !contractId.equals("contractId") ? Integer.valueOf(contractId) : 0, symbol, secType, null, 0.0d, null,
-                null, exchange, "USD", localSymbol, null, null,
+                null, exchange,"", localSymbol, null, null,
                 "SMART", false, null, null);
     }
 

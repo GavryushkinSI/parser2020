@@ -31,7 +31,7 @@ public class DesktopObject implements Serializable {
     //целевая позиция
     private String targetPoz;
     //количество убытков подряд
-    private int countLoss;
+    private int countLoss = 0;
     //текущий профит +/-
     private int profit;
     //Дополнительные поля для Interactive Brokers
@@ -185,8 +185,19 @@ public class DesktopObject implements Serializable {
         this.targetPoz = targetPoz;
     }
 
+    //Количество убыточных сделок подряд в стартегии
     public int getCountLoss() {
         return countLoss;
+    }
+
+    public void countLoss() {
+        if (eq.getTotal().size() != 0) {
+            if (eq.getTotal().get(eq.getTotal().size() - 1).doubleValue() < 0) {
+                this.countLoss = this.countLoss + 1;
+                return;
+            }
+        }
+        setCountLoss(0);
     }
 
     public void setCountLoss(int countLoss) {

@@ -35,6 +35,7 @@ public class ContractInfoPanel extends JPanel {
     private static Set<Integer> m_marketRuleIds = new HashSet<>();
     private final MarketRuleRequestPanel m_marketRuleRequestPanel = new MarketRuleRequestPanel();
     private JButton queryBtn;
+    private DetailsResultsPanel panel;
     Color dark = new Color(2, 2, 2, 179);
 
     public ContractInfoPanel() {
@@ -62,18 +63,18 @@ public class ContractInfoPanel extends JPanel {
             queryBtn.setBackground(dark);
             queryBtn.setForeground(Color.white);
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            JPanel btnPanel=new JPanel();
+            JPanel btnPanel = new JPanel();
             btnPanel.setLayout(new BorderLayout());
             btnPanel.add(queryBtn);
-            add(btnPanel,BorderLayout.WEST);
+            add(btnPanel, BorderLayout.WEST);
             add(m_contractPanel);
             add(Box.createHorizontalStrut(20));
         }
 
-        void onQuery() {
+        public void onQuery() {
             m_contractPanel.onOK();
 
-            DetailsResultsPanel panel = new DetailsResultsPanel();
+            panel = new DetailsResultsPanel();
             m_resultsPanels.addTab(m_contract.symbol() + " " + "Description", panel, true, true);
 //            ApiDemo.INSTANCE.controller().reqContractDetails(m_contract, panel);
             ParserApplication.ibConnector.controller().reqContractDetails(m_contract, panel);
@@ -115,6 +116,10 @@ public class ContractInfoPanel extends JPanel {
                 }
                 m_marketRuleRequestPanel.m_marketRuleIdCombo.setModel(new DefaultComboBoxModel<>(m_marketRuleIds.toArray(new Integer[m_marketRuleIds.size()])));
             }
+        }
+
+        public JTextArea getM_text() {
+            return m_text;
         }
     }
 

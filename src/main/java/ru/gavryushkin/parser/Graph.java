@@ -1,52 +1,57 @@
 package ru.gavryushkin.parser;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Graph implements Serializable {
-    private ArrayList<Integer> b;
-    private ArrayList<Integer> s;
+    private ArrayList<BigDecimal> b;
+    private ArrayList<BigDecimal> s;
 
     public Graph() {
         this.b = new ArrayList<>();
-        this.s=new ArrayList<>();
+        this.s = new ArrayList<>();
     }
 
-    public ArrayList<Integer> getB() {
+    public ArrayList<BigDecimal> getB() {
         return b;
     }
 
-    public void setB(ArrayList<Integer> b) {
+    public void setB(ArrayList<BigDecimal> b) {
         this.b = b;
     }
 
-    public ArrayList<Integer> getS() {
+    public ArrayList<BigDecimal> getS() {
         return s;
     }
 
-    public void setS(ArrayList<Integer> s) {
+    public void setS(ArrayList<BigDecimal> s) {
         this.s = s;
     }
 
-    public ArrayList<Integer> getTotal(){
-        ArrayList<Integer>  total=null;
-        int size=b.size()>s.size()?s.size():b.size();
-        if(b.size()!=0&&s.size()!=0){
-           total =new ArrayList<>();
-            for(int i=0;i<size;i++){
-                total.add(b.get(i)+s.get(i));
+    public ArrayList<BigDecimal> getTotal() {
+        ArrayList<BigDecimal> total = null;
+        int size = b.size() > s.size() ? s.size() : b.size();
+        if (b.size() != 0 && s.size() != 0) {
+            total = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                total.add(b.get(i).add(s.get(i)));
             }
         }
-        if(total==null) {
+        if (total == null) {
             return new ArrayList<>();
         }
+
         return total;
     }
 
-    public String getTotalResult(){
-        int x;
-        ArrayList<Integer>  total=getTotal();
-        x = total.stream().mapToInt(i -> i).sum();
+    public String getTotalResult() {
+        BigDecimal x = BigDecimal.ZERO;
+        List<BigDecimal> total = getTotal();
+        if (total.size() != 0) {
+            x = total.stream().reduce(BigDecimal::add).get();
+        }
         return String.valueOf(x);
     }
 

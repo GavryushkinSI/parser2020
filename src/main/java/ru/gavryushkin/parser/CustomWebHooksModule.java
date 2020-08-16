@@ -54,7 +54,7 @@ public class CustomWebHooksModule {
     public void init() throws ClassNotFoundException, UnsupportedLookAndFeelException, InstantiationException, IllegalAccessException {
         frame = new JDialog(ParserApplication.frame, "CUSTOM WEBHOOKS MODULE");
         frame.setIconImage(new ImageIcon("icon/icons8-webhook-22.png").getImage());
-        frame.setBounds(300, 300, 1420, 100);
+        frame.setBounds(300, 300, 600, 110);
         JButton button = new JButton("ADD STRATEGY", new ImageIcon("icon/icons8-add-20.png"));
         button.setToolTipText("Добавить стратегию");
         JButton buyBtn = new JButton("BUY");
@@ -127,28 +127,28 @@ public class CustomWebHooksModule {
             public void mouseClicked(MouseEvent e) {
                 PTextField name = new PTextField("nameTS");
                 PTextField account = new PTextField("account");
-                account.setToolTipText("Номер счёта");
+                //account.setToolTipText("Номер счёта");
                 account.setText(dialog.getAccounttext());
                 account.setForeground(Color.black);
                 PTextField clientCode = new PTextField("clientCode");
-                clientCode.setToolTipText("Код клиента");
+                //clientCode.setToolTipText("Код клиента");
                 clientCode.setForeground(Color.black);
                 clientCode.setText(dialog.getClientcodetext());
                 PTextField secCode = new PTextField("symbol");
-                secCode.setToolTipText("Код инструмента");
+                //secCode.setToolTipText("Код инструмента");
                 JComboBox type = new JComboBox(new String[]{"SPBFUT", "TQBR", "XBTUSD", "IB"});
                 PTextField quantity = new PTextField("quantity");
-                quantity.setToolTipText("Количество лотов в заявке");
+                //quantity.setToolTipText("Количество лотов в заявке");
                 PTextField delta = new PTextField("delta");
-                delta.setToolTipText("Размер проскальзывания, для рынка акций значение всегда равно 0");
+                //delta.setToolTipText("Размер проскальзывания, для рынка акций значение всегда равно 0");
                 PTextField contractId = new PTextField("contractId");
-                contractId.setToolTipText("Уникальный идентификатор инструмента");
+                //contractId.setToolTipText("Уникальный идентификатор инструмента");
                 PTextField exchange = new PTextField("exchange");
-                exchange.setToolTipText("Наименование биржи");
+                //exchange.setToolTipText("Наименование биржи");
                 PTextField localSymbol = new PTextField("localSymbol");
-                localSymbol.setToolTipText("Уточнённый код инструмента");
+                //localSymbol.setToolTipText("Уточнённый код инструмента");
                 PTextField secType = new PTextField("secType");
-                secType.setToolTipText("Тип инструмента (акции, фьючерсы...");
+                //secType.setToolTipText("Тип инструмента (акции, фьючерсы...");
                 JButton equity = new JButton("EQ", new ImageIcon("icon/icons8-graph-20.png"));
                 equity.setBackground(dark);
                 equity.setForeground(Color.white);
@@ -170,7 +170,7 @@ public class CustomWebHooksModule {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         try {
-                            new LineChart1("EQ " + object.getName().getText(), object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
+                            new LineChart1("EQ", object.getEq().getTotal()).create_graphicsWebHook("EQ", object.getEq().getTotal());
                             object.getEq().getTotal().forEach(n -> System.out.println(n));
                         } catch (Exception e1) {
                             e1.printStackTrace();
@@ -269,13 +269,13 @@ public class CustomWebHooksModule {
                         jCheckBox.setBackground(status == true ? green : null);
                         jCheckBox.setOpaque(status == true ? true : false);
                         map.put(apply.getIdObject(), object);
-                        writeCode(object.getType().getSelectedItem().toString());
+                        writeCode(object.getType().getSelectedItem().toString(), object);
                         getPriceFromQuik();
                         save(map);
                         System.out.println(buyList);
                         System.out.println(sellList);
                         System.out.println(holdList);
-                        checkType(object, Color.lightGray);
+                        setBorder(true, object, Color.lightGray);
                     }
                 });
                 edit.addMouseListener(new MouseAdapter() {
@@ -354,7 +354,7 @@ public class CustomWebHooksModule {
                 gridPanel.add(del);
                 frame.setVisible(false);
                 frame.setSize(frame.getWidth(), frame.getHeight() + 35);
-                checkType(object, red);
+                setBorder(true, object, red);
                 frame.setVisible(true);
             }
         });
@@ -480,7 +480,7 @@ public class CustomWebHooksModule {
                 object.getjCheckBox().setBackground(status == true ? green : null);
                 object.getjCheckBox().setOpaque(status == true ? true : false);
                 map.put(apply.getIdObject(), object);
-                writeCode(object.getType().getSelectedItem().toString());
+                writeCode(object.getType().getSelectedItem().toString(),object);
                 getPriceFromQuik();
                 save(map);
                 System.out.println(buyList);
@@ -575,7 +575,7 @@ public class CustomWebHooksModule {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
-                    new LineChart1("EQ " + object.getName().getText(), object.getEq().getTotal()).create_graphics("EQ", object.getEq().getTotal());
+                    new LineChart1("EQ", object.getEq().getTotal()).create_graphicsWebHook("EQ", object.getEq().getTotal());
                 } catch (Exception e1) {
                     e1.printStackTrace();
                 }
@@ -626,26 +626,40 @@ public class CustomWebHooksModule {
         } catch (Exception e) {
             e.printStackTrace();
         }
+//        infoPrice.put("SI", String.valueOf(new Random().nextInt(60000)));
+//        infoPrice.put("RI", String.valueOf(new Random().nextInt(100000)));
         return infoPrice;
     }
 
-    private synchronized void writeCode(String type) {
-        BufferedWriter writer = null;
-        BufferedReader rd = null;
-        try {
-            rd = new BufferedReader(new FileReader(type.equals("SPBFUT") ? "fut.txt" : "stock.txt"));
-            writer = new BufferedWriter(new FileWriter(type.equals("SPBFUT") ? "fut.txt" : "stock.txt", true));
-            String str = rd.ready() ? rd.readLine() : " ";
-            for (Map.Entry<Integer, DesktopObject> entry : map.entrySet()) {
-                if (!str.contains(entry.getValue().getSeccode().getText())) {
-                    writer.write(entry.getValue().getSeccode().getText() + ",");
-                }
+    private synchronized void writeCode(String type, DesktopObject object) {
+        if (!type.equals("IB") || !type.equals("XBTUSD")) {
+            BufferedWriter writer = null;
+            BufferedReader rd = null;
+            try {
+                if (type.equals("SPBFUT")) {
+                    rd = new BufferedReader(new FileReader("fut.txt"));
+                    writer = new BufferedWriter(new FileWriter("fut.txt",true));
+                    String str = rd.ready() ? rd.readLine() : " ";
+                    if (!str.contains(object.getSeccode().getText())) {
+                        writer.write(object.getSeccode().getText() + ",");
+                    }
+                    writer.flush();
+                    rd.close();
+                    writer.close();
+                } else if (type.equals("TQBR")) {
+                        rd = new BufferedReader(new FileReader("stock.txt"));
+                        writer = new BufferedWriter(new FileWriter("stock.txt",true));
+                        String str = rd.ready() ? rd.readLine() : " ";
+                        if (!str.contains(object.getSeccode().getText())) {
+                            writer.write(object.getSeccode().getText() + ",");
+                        }
+                        writer.flush();
+                        rd.close();
+                        writer.close();
+                    }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            writer.flush();
-            rd.close();
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

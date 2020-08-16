@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -64,20 +65,20 @@ public class Datasetp {
         return list;
     }
 
-    public static CategoryDataset createDataForEQWebHook(ArrayList<Integer> list) {
+    public static CategoryDataset createDataForEQWebHook(ArrayList<BigDecimal> list) {
 
         DefaultCategoryDataset dataset;
 
         final String series1 = "EQ";
-        ArrayList<Integer> x=list;
-        int y = 0;
+        ArrayList<BigDecimal> x=list;
+        BigDecimal y = BigDecimal.ZERO;
         dataset = new DefaultCategoryDataset();
         for (int i = -1; i < x.size(); i++) {
             if (i == -1) {
-                dataset.addValue(0, series1, new Integer(0));
+                dataset.addValue(BigDecimal.ZERO.doubleValue(), series1, "0");
             } else {
-                y = x.get(i) + y;
-                dataset.addValue(y, series1,String.valueOf(i+1));
+                y = x.get(i).add(y);
+                dataset.addValue(y.doubleValue(), series1,String.valueOf(i+1));
             }
         }
         return dataset;

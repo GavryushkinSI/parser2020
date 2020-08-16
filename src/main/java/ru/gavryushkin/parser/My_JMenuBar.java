@@ -86,6 +86,7 @@ public class My_JMenuBar extends JMenuBar {
                 StringSelection stringSelection = new StringSelection("http://" + My_JMenuBar.this.getHost() + "/webHook");
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                 clipboard.setContents(stringSelection, (ClipboardOwner) null);
+                JOptionPane.showMessageDialog(new JDialog(), "URL локальной машины скопирован");
             }
         });
         this.item_4.addActionListener(new ActionListener() {

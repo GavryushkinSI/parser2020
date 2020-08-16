@@ -1,6 +1,7 @@
 package ru.gavryushkin.parser.model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 //Модель заявки для вебхуков
 public class OrderWebHook implements Serializable {
@@ -13,12 +14,23 @@ public class OrderWebHook implements Serializable {
     //размер позиции
     private String position;
 
+    //Цена исполнения сигнала из TradingView
+    private BigDecimal price;
+
     public String getPosition() {
         return position;
     }
 
     public void setPosition(String position) {
         this.position = position;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
     }
 
     public String getNameTs() {

@@ -14,6 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,12 +23,29 @@ public class LineChart1 extends JFrame {
     static CategoryDataset dataset;
     private static final long serialVersionUID = 1L;
     private static ArrayList<Integer> list;
+    private static ArrayList<BigDecimal> listTotal;
 
     public LineChart1(final String title, ArrayList<Integer> listIn) {
         super(title);
         this.list=listIn;
         if (title.equals("EQ")) {
-            dataset = Datasetp.createDataForEQWebHook(list);
+            //dataset = Datasetp.createDataForEQWebHook(list);
+        } else {
+            dataset = Datasetp.createDataset1();
+        }
+        final JFreeChart chart = createChart(dataset);
+        final ChartPanel chartPanel = new ChartPanel(chart);
+        //chartPanel.setPreferredSize(new Dimension(330, 280));
+        //chartPanel.setPreferredSize(new Dimension(330, 280));
+
+        setContentPane(chartPanel);
+    }
+
+    public LineChart1(final String title, ArrayList<BigDecimal> listIn,String...x) {
+        super(title);
+        this.listTotal=listIn;
+        if (title.equals("EQ")) {
+            dataset = Datasetp.createDataForEQWebHook(listTotal);
         } else {
             dataset = Datasetp.createDataset1();
         }
@@ -59,7 +77,7 @@ public class LineChart1 extends JFrame {
 
         NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
         rangeAxis.setStandardTickUnits(
-                NumberAxis.createIntegerTickUnits());
+                NumberAxis.createStandardTickUnits());
         rangeAxis.setAutoRangeIncludesZero(true);
 
         LineAndShapeRenderer renderer;
@@ -72,6 +90,22 @@ public class LineChart1 extends JFrame {
     }
 
    public void create_graphics(String title,ArrayList<Integer> list) {
+        {
+            final LineChart1 demo = new LineChart1(title,list);
+            demo.addWindowFocusListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    list.clear();
+                }
+            });
+            demo.pack();
+            demo.setBounds(1000, 230, 350, 280);
+            demo.setIconImage(new ImageIcon("graph.png").getImage());
+            demo.setVisible(true);
+        }
+    }
+
+    public void create_graphicsWebHook(String title,ArrayList<BigDecimal> list) {
         {
             final LineChart1 demo = new LineChart1(title,list);
             demo.addWindowFocusListener(new WindowAdapter() {

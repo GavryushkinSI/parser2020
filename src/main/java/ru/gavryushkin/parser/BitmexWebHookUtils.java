@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -17,7 +18,7 @@ import java.util.Date;
 public class BitmexWebHookUtils {
 
     private static StringWriter wr = new StringWriter();
-    private static ArrayList<Integer> mapEq;
+    private static ArrayList<BigDecimal> mapEq;
 
     public static void openBuyOrder(ParserApplication.Dialog dialog, JTextField text, String[] pozitionBitmex, int status, DesktopObject obj, ParserApplication.Test test) {
         try {
@@ -33,8 +34,8 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getB();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (-1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (-1)));
                     obj.getEq().setB(mapEq);
                 }
             } else if (status == 0) {
@@ -49,7 +50,7 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getB();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (-1)));
                     obj.getEq().setB(mapEq);
                 }
             }
@@ -84,8 +85,8 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getS();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (1)));
                     obj.getEq().setS(mapEq);
                 }
             } else if (status == 0) {
@@ -100,7 +101,7 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getS();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (1)));
                     obj.getEq().setS(mapEq);
                 }
             }
@@ -135,7 +136,7 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getS();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (1)));
                     obj.getEq().setS(mapEq);
                 }
             } else if (status == -1) {
@@ -150,7 +151,7 @@ public class BitmexWebHookUtils {
                     pozitionBitmex = Bitmex.getPozition(dialog.getIdField().getText(),
                             dialog.getKeyField().getText(), dialog.getUrlBtn().getText());
                     mapEq = obj.getEq().getB();
-                    mapEq.add((int) (Double.valueOf(pozitionBitmex[1]) * (-1)));
+                    mapEq.add(BigDecimal.valueOf(Double.valueOf(pozitionBitmex[1]) * (-1)));
                     obj.getEq().setB(mapEq);
                 }
             }
