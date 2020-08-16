@@ -1,0 +1,3 @@
+Sun Aug 16 14:48:15 MSK 2020 {"nameTs":"1","operation":"buy"}
+Sun Aug 16 14:48:25 MSK 2020 {"nameTs":"1","operation":"sell"}
+Sun Aug 16 14:48:32 MSK 2020 {"nameTs":"1","operation":"hold"}

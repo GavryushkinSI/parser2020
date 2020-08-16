@@ -72,7 +72,7 @@ public class CustomWebHooksModule {
         frame.add(panelBtn, BorderLayout.NORTH);
         lineState = new JTextField();
         JPanel panel = new JPanel(new BorderLayout());
-        GridLayout gridLayout = new GridLayout(0, 17);
+        GridLayout gridLayout = new GridLayout(0, 18);
         JPanel gridPanel = new JPanel(gridLayout);
         initialize(gridPanel, frame);
         if (map == null) {
@@ -148,6 +148,7 @@ public class CustomWebHooksModule {
                 PTextField localSymbol = new PTextField("localSymbol");
                 //localSymbol.setToolTipText("Уточнённый код инструмента");
                 PTextField secType = new PTextField("secType");
+                PTextField currency = new PTextField("currency");
                 //secType.setToolTipText("Тип инструмента (акции, фьючерсы...");
                 JButton equity = new JButton("EQ", new ImageIcon("icon/icons8-graph-20.png"));
                 equity.setBackground(dark);
@@ -159,7 +160,8 @@ public class CustomWebHooksModule {
                 JButton target = new JButton("All", new ImageIcon("icon/icons8-all-20.png"));
                 DesktopObject object = new DesktopObject(name, account, clientCode, secCode, type,
                         quantity, delta, jCheckBox, idObject++,
-                        target, equity, new Graph(), exchange, contractId, localSymbol, secType);
+                        target, equity, new Graph(), exchange,
+                        contractId, localSymbol, secType,currency);
                 type.addItemListener(new ItemListener() {
                     @Override
                     public void itemStateChanged(ItemEvent e) {
@@ -189,6 +191,7 @@ public class CustomWebHooksModule {
                 gridPanel.add(object.getExchange());
                 gridPanel.add(object.getLocalSymbol());
                 gridPanel.add(object.getSecType());
+                gridPanel.add(object.getCurrency());
                 gridPanel.add(object.getjCheckBox());
                 gridPanel.add(object.getTarget());
                 gridPanel.add(object.getEquity());
@@ -264,6 +267,7 @@ public class CustomWebHooksModule {
                         contractId.setBackground(Color.LIGHT_GRAY);
                         exchange.setBackground(Color.LIGHT_GRAY);
                         secType.setBackground(Color.LIGHT_GRAY);
+                        currency.setBackground(Color.LIGHT_GRAY);
                         localSymbol.setBackground(Color.LIGHT_GRAY);
                         boolean status = jCheckBox.isSelected();
                         jCheckBox.setBackground(status == true ? green : null);
@@ -304,6 +308,7 @@ public class CustomWebHooksModule {
                         contractId.setBackground(Color.white);
                         exchange.setBackground(Color.white);
                         secType.setBackground(Color.white);
+                        currency.setBackground(Color.white);
                         localSymbol.setBackground(Color.white);
                         boolean status = jCheckBox.isSelected();
                         jCheckBox.setBackground(status == true ? green : col1);
@@ -330,6 +335,7 @@ public class CustomWebHooksModule {
                         gridPanel.remove(obj.getExchange());
                         gridPanel.remove(obj.getLocalSymbol());
                         gridPanel.remove(obj.getSecType());
+                        gridPanel.remove(obj.getCurrency());
                         gridPanel.remove(edit);
                         gridPanel.remove(apply);
                         gridPanel.remove(del);
@@ -412,6 +418,7 @@ public class CustomWebHooksModule {
                 gridPanel.add(object.getExchange());
                 gridPanel.add(object.getLocalSymbol());
                 gridPanel.add(object.getSecType());
+                gridPanel.add(object.getCurrency());
                 gridPanel.add(object.getjCheckBox());
                 gridPanel.add(object.getTarget());
                 gridPanel.add(object.getEquity());
@@ -462,6 +469,7 @@ public class CustomWebHooksModule {
                 object.getExchange().setEnabled(false);
                 object.getContractID().setEnabled(false);
                 object.getSecType().setEnabled(false);
+                object.getCurrency().setEnabled(false);
                 object.getLocalSymbol().setEnabled(false);
                 object.getName().setBackground(Color.LIGHT_GRAY);
                 object.getAccount().setBackground(Color.LIGHT_GRAY);
@@ -474,6 +482,7 @@ public class CustomWebHooksModule {
                 object.getContractID().setBackground(Color.LIGHT_GRAY);
                 object.getLocalSymbol().setBackground(Color.LIGHT_GRAY);
                 object.getSecType().setBackground(Color.LIGHT_GRAY);
+                object.getCurrency().setBackground(Color.LIGHT_GRAY);
                 object.getTarget().setEnabled(false);
                 object.getEquity();
                 boolean status = object.getjCheckBox().isSelected();
@@ -504,6 +513,7 @@ public class CustomWebHooksModule {
                 object.getExchange().setEnabled(true);
                 object.getContractID().setEnabled(true);
                 object.getSecType().setEnabled(true);
+                object.getCurrency().setEnabled(true);
                 object.getLocalSymbol().setEnabled(true);
                 object.getName().setBackground(Color.white);
                 object.getAccount().setBackground(Color.white);
@@ -515,6 +525,7 @@ public class CustomWebHooksModule {
                 object.getExchange().setBackground(Color.white);
                 object.getContractID().setBackground(Color.white);
                 object.getSecType().setBackground(Color.white);
+                object.getCurrency().setBackground(Color.white);
                 object.getLocalSymbol().setBackground(Color.white);
                 object.getjCheckBox().setOpaque(false);
                 boolean status = object.getjCheckBox().isSelected();
@@ -539,6 +550,7 @@ public class CustomWebHooksModule {
                 gridPanel.remove(obj.getEquity());
                 gridPanel.remove(obj.getExchange());
                 gridPanel.remove(obj.getSecType());
+                gridPanel.remove(obj.getCurrency());
                 gridPanel.remove(obj.getLocalSymbol());
                 gridPanel.remove(obj.getContractID());
                 gridPanel.remove(edit);
@@ -766,6 +778,7 @@ public class CustomWebHooksModule {
             object.getExchange().setEnabled(false);
             object.getContractID().setEnabled(false);
             object.getSecType().setEnabled(false);
+            object.getCurrency().setEnabled(false);
             object.getLocalSymbol().setEnabled(false);
         } else if (object.getType().getSelectedItem().equals("TQBR")) {
             object.getAccount().setText(dialog.getAccounttext_2().getText());
@@ -776,6 +789,7 @@ public class CustomWebHooksModule {
             object.getExchange().setEnabled(false);
             object.getContractID().setEnabled(false);
             object.getSecType().setEnabled(false);
+            object.getCurrency().setEnabled(false);
             object.getLocalSymbol().setEnabled(false);
         } else if (object.getType().getSelectedItem().equals("XBTUSD")) {
             object.getAccount().setEnabled(false);
@@ -785,6 +799,7 @@ public class CustomWebHooksModule {
             object.getExchange().setEnabled(false);
             object.getContractID().setEnabled(false);
             object.getSecType().setEnabled(false);
+            object.getCurrency().setEnabled(false);
             object.getLocalSymbol().setEnabled(false);
         } else if ((object.getType().getSelectedItem().equals("IB"))) {
             object.getAccount().setEnabled(false);
@@ -794,6 +809,7 @@ public class CustomWebHooksModule {
             object.getExchange().setEnabled(true);
             object.getContractID().setEnabled(true);
             object.getSecType().setEnabled(true);
+            object.getCurrency().setEnabled(true);
             object.getLocalSymbol().setEnabled(true);
         }
     }
@@ -810,6 +826,7 @@ public class CustomWebHooksModule {
             object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getCurrency().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
         } else if (object.getType().getSelectedItem().equals("TQBR")) {
             object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
@@ -822,6 +839,7 @@ public class CustomWebHooksModule {
             object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getCurrency().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
         } else if (object.getType().getSelectedItem().equals("XBTUSD")) {
             object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
@@ -834,6 +852,7 @@ public class CustomWebHooksModule {
             object.getExchange().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getContractID().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getSecType().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
+            object.getCurrency().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
             object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 2));
         } else if ((object.getType().getSelectedItem().equals("IB"))) {
             object.getName().setBorder(BorderFactory.createLineBorder(color, 2));
@@ -846,6 +865,7 @@ public class CustomWebHooksModule {
             object.getExchange().setBorder(BorderFactory.createLineBorder(color, 2));
             object.getContractID().setBorder(BorderFactory.createLineBorder(color, 2));
             object.getSecType().setBorder(BorderFactory.createLineBorder(color, 2));
+            object.getCurrency().setBorder(BorderFactory.createLineBorder(color, 2));
             object.getLocalSymbol().setBorder(BorderFactory.createLineBorder(color, 2));
         }
     }

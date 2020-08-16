@@ -43,9 +43,11 @@ public class DesktopObject implements Serializable {
     private PTextField localSymbol;
     //Тип инструмента
     private PTextField secType;
+    //валюта инструмента
+    private PTextField currency;
 
     public DesktopObject(PTextField name, PTextField account, PTextField clientCode, PTextField seccode, JComboBox type, PTextField quantity, PTextField delta, JToggleButton jCheckBox, int idObject, JButton target, JButton equity, Graph list,
-                         PTextField exchange, PTextField contractID, PTextField localSymbol, PTextField secType) {
+                         PTextField exchange, PTextField contractID, PTextField localSymbol, PTextField secType, PTextField currency) {
         this.name = name;
         this.account = account;
         this.clientCode = clientCode;
@@ -62,6 +64,7 @@ public class DesktopObject implements Serializable {
         this.contractID = contractID;
         this.localSymbol = localSymbol;
         this.secType = secType;
+        this.currency = currency;
     }
 
     public PTextField getName() {
@@ -244,6 +247,13 @@ public class DesktopObject implements Serializable {
         this.secType = secType;
     }
 
+    public PTextField getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(PTextField currency) {
+        this.currency = currency;
+    }
 
     @Override
     public String toString() {

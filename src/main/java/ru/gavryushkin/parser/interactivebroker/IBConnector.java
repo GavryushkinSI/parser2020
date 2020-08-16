@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -69,7 +71,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
     private boolean statusThread = false;
     private JButton connect;
     private CustomWebHooksModule cwm;
-    private BigDecimal big=new BigDecimal(-1);
+    private BigDecimal big = new BigDecimal(-1);
     Color dark = new Color(2, 2, 2, 179);
 
     public IBConnector(IConnectionConfiguration connectionConfig, JFrame frame, CustomWebHooksModule cwm) {
@@ -178,19 +180,21 @@ public class IBConnector implements ApiController.IConnectionHandler {
             JTextField secType = new JTextField();
             JLabel label5 = new JLabel("localSymbol");
             JTextField localSymbol = new JTextField();
+            JLabel label6 = new JLabel("currency");
+            JTextField currency = new JTextField();
 
             JButton buy = new JButton("Buy");
             JButton sell = new JButton(("Sell"));
             buy.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    createOrder(symbol.getText(), exchange.getText(), quantity.getText(), secType.getText(), localSymbol.getText(), contractId.getText(), true);
+                    createOrder(symbol.getText(), exchange.getText(), quantity.getText(), secType.getText(), localSymbol.getText(), contractId.getText(), currency.getText(), true);
                 }
             });
             sell.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    createOrder(symbol.getText(), exchange.getText(), quantity.getText(), secType.getText(), localSymbol.getText(), contractId.getText(), false);
+                    createOrder(symbol.getText(), exchange.getText(), quantity.getText(), secType.getText(), localSymbol.getText(), contractId.getText(), currency.getText(), false);
                 }
             });
 
@@ -208,7 +212,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
             p1.add(urlText);
             p1.add(name);
             p1.add(nameTxt);
-            urlText.setText("http://188.120.250.228:80/customWebHook");
+            urlText.setText("http://" + getHost() + "/customWebHook");
             p1.add(buyBtn);
             buyBtn.addMouseListener(new MouseAdapter() {
                 @Override
@@ -219,8 +223,8 @@ public class IBConnector implements ApiController.IConnectionHandler {
                         HttpEntity<String> entity = new HttpEntity(body, headers);
                         restTemplate.exchange(
                                 urlText.getText(), HttpMethod.POST, entity, Void.class);
-                    }catch (Exception ex){
-                        JOptionPane.showMessageDialog(dialog,"Ошибка вебхук");
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dialog, "Ошибка вебхук");
                     }
                 }
             });
@@ -234,9 +238,9 @@ public class IBConnector implements ApiController.IConnectionHandler {
                         HttpEntity<String> entity = new HttpEntity(body, headers);
                         restTemplate.exchange(
                                 urlText.getText(), HttpMethod.POST, entity, Void.class);
-                    }catch (Exception ex){
-                    JOptionPane.showMessageDialog(dialog,"Ошибка вебхук");
-                }
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dialog, "Ошибка вебхук");
+                    }
 
                 }
             });
@@ -383,12 +387,13 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                     obj.getSecType().getText().replace("secType", ""),
                                     obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                     obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
                                     true
                             );
                         }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getB();
                             mapEq.add(order.getPrice().multiply(big));
                             mapEq.add(order.getPrice().multiply(big));
@@ -405,18 +410,19 @@ public class IBConnector implements ApiController.IConnectionHandler {
                             .equals("Quik")) {
                         if (obj.getjCheckBox().isSelected()) {
                             orderId = createOrder(
-                                obj.getSeccode().getText(),
-                                obj.getExchange().getText(),
-                                obj.getQuantity().getText(),
-                                obj.getSecType().getText().replace("secType", ""),
-                                obj.getLocalSymbol().getText().replace("localSymbol", ""),
-                                obj.getContractID().getText().replace("contractId", ""),
-                                true
-                        );
-                            }
+                                    obj.getSeccode().getText(),
+                                    obj.getExchange().getText(),
+                                    obj.getQuantity().getText(),
+                                    obj.getSecType().getText().replace("secType", ""),
+                                    obj.getLocalSymbol().getText().replace("localSymbol", ""),
+                                    obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
+                                    true
+                            );
+                        }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getB();
                             mapEq.add(order.getPrice().multiply(big));
                             obj.getEq().setB(mapEq);
@@ -431,13 +437,14 @@ public class IBConnector implements ApiController.IConnectionHandler {
                 if (obj.getTarget().getLabel()
                         .equals("All") || obj.getTarget().getLabel()
                         .equals("Quik")) {
-                        orderId = createOrder(
+                    orderId = createOrder(
                             obj.getSeccode().getText(),
                             obj.getExchange().getText(),
                             String.valueOf(Integer.valueOf(order.getPosition()) - obj.getCurrentPosition()),
                             obj.getSecType().getText().replace("secType", ""),
                             obj.getLocalSymbol().getText().replace("localSymbol", ""),
                             obj.getContractID().getText().replace("contractId", ""),
+                            obj.getCurrency().getText().replace("currency", ""),
                             true
                     );
                     obj.setCurrentPosition(Integer.parseInt(order.getPosition()));
@@ -473,12 +480,13 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                     obj.getSecType().getText().replace("secType", ""),
                                     obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                     obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
                                     false
                             );
                         }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getS();
                             mapEq.add(order.getPrice());
                             mapEq.add(order.getPrice());
@@ -501,12 +509,13 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                     obj.getSecType().getText().replace("secType", ""),
                                     obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                     obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
                                     false
                             );
                         }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getB();
                             mapEq.add(order.getPrice());
                             obj.getEq().setB(mapEq);
@@ -529,6 +538,7 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                 obj.getSecType().getText().replace("secType", ""),
                                 obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                 obj.getContractID().getText().replace("contractId", ""),
+                                obj.getCurrency().getText().replace("currency", ""),
                                 false
                         );
                     }
@@ -565,12 +575,13 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                     obj.getSecType().getText().replace("secType", ""),
                                     obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                     obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
                                     false
                             );
                         }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getS();
                             mapEq.add(order.getPrice());
                             obj.getEq().setS(mapEq);
@@ -592,12 +603,13 @@ public class IBConnector implements ApiController.IConnectionHandler {
                                     obj.getSecType().getText().replace("secType", ""),
                                     obj.getLocalSymbol().getText().replace("localSymbol", ""),
                                     obj.getContractID().getText().replace("contractId", ""),
+                                    obj.getCurrency().getText().replace("currency", ""),
                                     true
                             );
                         }
                     }
-                    if(order!=null) {
-                        if(order.getPrice()!=null) {
+                    if (order != null) {
+                        if (order.getPrice() != null) {
                             mapEq = obj.getEq().getB();
                             mapEq.add(order.getPrice().multiply(big));
                             obj.getEq().setB(mapEq);
@@ -636,8 +648,8 @@ public class IBConnector implements ApiController.IConnectionHandler {
         }
     }
 
-    private int createOrder(String symbol, String exchange, String quantity, String secType, String localSymbol, String contractId, boolean orderSide) {
-        Contract contract = createContract(symbol, exchange, secType, localSymbol, contractId);
+    private int createOrder(String symbol, String exchange, String quantity, String secType, String localSymbol, String contractId, String currency, boolean orderSide) {
+        Contract contract = createContract(symbol, exchange, secType, localSymbol, contractId, currency);
         // https://interactivebrokers.github.io/tws-api/classIBApi_1_1Order.html
         Order order = new Order();
         order.transmit(true);
@@ -648,14 +660,23 @@ public class IBConnector implements ApiController.IConnectionHandler {
         return controller.placeOrModifyOrder(contract, order, null);
     }
 
-    protected Contract createContract(String symbol, String exchange, String secType, String localSymbol, String contractId) {
+    protected Contract createContract(String symbol, String exchange, String secType, String localSymbol, String contractId, String currency) {
         return new Contract(!contractId.isEmpty() && !contractId.equals("contractId") ? Integer.valueOf(contractId) : 0, symbol, secType, null, 0.0d, null,
-                null, exchange,"", localSymbol, null, null,
+                null, exchange, currency, localSymbol, null, null,
                 "SMART", false, null, null);
     }
 
     public JDialog getDialog() {
         dialog.setVisible(true);
         return dialog;
+    }
+
+    private String getHost() {
+        try {
+            return InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException var2) {
+            var2.printStackTrace();
+            return null;
+        }
     }
 }
